@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-deep: #05090f;
+  --bg-card: #0c1520;
+  --bg-card-hover: #112030;
+  --border: #1a3050;
+  --border-bright: #1e4a7a;
+  --green: #00d64f;
+  --green-dim: #00a83d;
+  --gold: #f5c518;
+  --gold-dim: #c49a10;
+  --text-primary: #e8f0f8;
+  --text-secondary: #7a9ab8;
+  --text-muted: #3d5a72;
+  --red: #ff4757;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Barlow', sans-serif;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(0,150,50,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(245,197,24,0.04) 0%, transparent 50%);
+}
+
+.font-display { font-family: 'Bebas Neue', cursive; letter-spacing: 0.05em; }
+.font-ui { font-family: 'Barlow Condensed', sans-serif; }
+
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
+.card:hover { border-color: var(--border-bright); background: var(--bg-card-hover); }
+
+.btn-primary {
+  background: var(--green); color: #05090f;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.75rem 1.5rem; border-radius: 8px; border: none; cursor: pointer;
+  transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.btn-primary:hover { background: #00f060; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,214,79,0.3); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-gold {
+  background: var(--gold); color: #05090f;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.75rem 1.5rem; border-radius: 8px; border: none; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-gold:hover { background: #ffd700; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(245,197,24,0.3); }
+
+.btn-outline {
+  background: transparent; color: var(--text-primary);
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+  font-size: 1rem; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-bright); cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-outline:hover { border-color: var(--text-primary); background: rgba(255,255,255,0.05); }
+
+.input {
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text-primary);
+  font-family: 'Barlow', sans-serif; font-size: 1rem;
+  padding: 0.75rem 1rem; width: 100%; outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,214,79,0.12); }
+
+.input-score {
+  background: rgba(255,255,255,0.07); border: 2px solid var(--border-bright);
+  border-radius: 8px; color: var(--text-primary);
+  font-family: 'Bebas Neue', cursive; font-size: 2rem; text-align: center;
+  width: 4rem; padding: 0.4rem; outline: none;
+  transition: all 0.2s ease;
+}
+.input-score:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,214,79,0.15); background: rgba(0,214,79,0.07); }
+
+.badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.6rem; border-radius: 20px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.badge-green { background: rgba(0,214,79,0.15); color: var(--green); border: 1px solid rgba(0,214,79,0.3); }
+.badge-gold { background: rgba(245,197,24,0.15); color: var(--gold); border: 1px solid rgba(245,197,24,0.3); }
+.badge-red { background: rgba(255,71,87,0.15); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+.badge-muted { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--border); }
+
+.navbar { background: rgba(5,9,15,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+
+.rank-row { display: grid; grid-template-columns: 2.5rem 1fr auto; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
+.rank-row:hover { background: rgba(255,255,255,0.03); }
+.rank-row:last-child { border-bottom: none; }
+
+.game-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; transition: all 0.2s ease; cursor: pointer; }
+.game-card:hover { border-color: var(--border-bright); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.game-card.has-bet { border-color: rgba(0,214,79,0.3); box-shadow: 0 0 0 1px rgba(0,214,79,0.1) inset; }
+.game-card.finished { opacity: 0.75; }
+
+.score-display { font-family: 'Bebas Neue', cursive; font-size: 2.5rem; line-height: 1; letter-spacing: 0.05em; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-green { 0%,100% { box-shadow: 0 0 0 0 rgba(0,214,79,0.4); } 50% { box-shadow: 0 0 0 8px rgba(0,214,79,0); } }
+
+.animate-fade-up { animation: fade-up 0.4s ease both; }
+.animate-pulse-green { animation: pulse-green 2s infinite; }
+
+.trophy-gradient { background: linear-gradient(135deg, var(--gold), #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.green-gradient { background: linear-gradient(135deg, #00d64f, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
