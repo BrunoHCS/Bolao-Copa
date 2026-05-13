@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase, Player } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
+import Script from "next/script";
+import { Adsense } from "@/components/Adsense";
 
 function Navbar({ player, onLogout }: { player: Player | null; onLogout: () => void }) {
   const pathname = usePathname()
@@ -100,8 +102,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <title>Bolão Copa 2026</title>
         <meta name="description" content="Bolão da Copa do Mundo 2026!" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1212849269478012"
-     crossorigin="anonymous"></script>
+        <Script
+          async
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXX"
+          crossOrigin="anonymous"
+        />
       </head>
       <body>
         <Navbar player={player} onLogout={handleLogout} />

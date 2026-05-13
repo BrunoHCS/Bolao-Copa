@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { Adsense } from "@/components/Adsense";
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('')
@@ -155,6 +156,7 @@ export default function RegisterPage() {
           <ScoreRule pts="0 pts" desc="Errou o resultado" color="var(--text-muted)" />
         </div>
       </div>
+      <Adsense />
     </div>
   )
 }
