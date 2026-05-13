@@ -39,6 +39,13 @@ export default function RegisterPage() {
 
       if (!authData.user) { setError('Erro ao criar conta.'); return }
 
+      // Garantir sessão ativa
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInErr) {
+        setError('Erro ao fazer login: ' + signInErr.message)
+        return
+      }
+
       // Criar perfil do jogador
       const { error: profileErr } = await supabase.from('players').insert({
         id: authData.user.id,
