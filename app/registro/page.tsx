@@ -24,43 +24,41 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
-      const email = `${username.toLowerCase().trim()}@bolao2026.app`
+      const cleanUsername = username.toLowerCase().trim()
+      const email = `${cleanUsername}@bolao2026.app`
 
       // Criar usuário no Supabase Auth
       const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password })
       if (authErr) {
-        if (authErr.message.includes('already registered')) {
-          setError('Este nome de usuário já está em uso.')
-        } else {
-          setError(authErr.message)
-        }
+        setError(authErr.message.includes('already registered')
+          ? 'Este nome de usuário já está em uso.'
+          : authErr.message)
         return
       }
 
       if (!authData.user) { setError('Erro ao criar conta.'); return }
 
-      // Garantir sessão ativa
-      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInErr) {
-        setError('Erro ao fazer login: ' + signInErr.message)
-        return
-      }
-
-      // Criar perfil do jogador
-      const { error: profileErr } = await supabase.from('players').insert({
+      // Upsert do perfil (tolera player órfão de deleção anterior no painel)
+      const { error: profileErr } = await supabase.from('players').upsert({
         id: authData.user.id,
-        username: username.toLowerCase().trim(),
+        username: cleanUsername,
         display_name: displayName.trim(),
         is_admin: false,
         total_points: 0,
-      })
+      }, { onConflict: 'id' })
 
       if (profileErr) {
-        if (profileErr.message.includes('duplicate') || profileErr.code === '23505') {
-          setError('Este nome de usuário já está em uso.')
-        } else {
-          setError('Erro ao criar perfil: ' + profileErr.message)
-        }
+        setError(profileErr.code === '23505'
+          ? 'Este nome de usuário já está em uso.'
+          : 'Erro ao criar perfil: ' + profileErr.message)
+        return
+      }
+
+      // signUp nem sempre estabelece sessão — força o login explicitamente
+      const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
+      if (loginErr) {
+        // Conta criada mas sessão falhou — manda pro login
+        router.push('/login')
         return
       }
 
@@ -152,7 +150,6 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* Regras rápidas */}
       <div className="card" style={{ padding: '1.25rem', marginTop: '1.5rem' }}>
         <h3 className="font-ui" style={{ fontSize: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
           Como funciona a pontuação
