@@ -23,6 +23,7 @@ function Navbar({ player, onLogout }: { player: Player | null; onLogout: () => v
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
           <NavLink href="/" active={isActive('/')}>Ranking</NavLink>
           {player && <NavLink href="/palpites" active={isActive('/palpites')}>Palpites</NavLink>}
+          {player && <NavLink href="/grupos" active={pathname.startsWith('/grupos')}>Grupos</NavLink>}
           {player?.is_admin && <NavLink href="/admin" active={isActive('/admin')} gold>Admin</NavLink>}
 
           <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 0.5rem' }} />

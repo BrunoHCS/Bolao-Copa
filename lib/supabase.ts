@@ -35,3 +35,17 @@ export type Bet = {
   away_score: number
   points: number
 }
+
+export type Group = {
+  id: string
+  name: string
+  description: string | null
+  owner_id: string
+  created_at: string
+}
+
+export type GroupMember = {
+  group_id: string
+  player_id: string
+  joined_at: string
+}
