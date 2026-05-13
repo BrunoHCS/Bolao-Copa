@@ -102,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <title>Bolão Copa 2026</title>
         <meta name="description" content="Bolão da Copa do Mundo 2026!" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="google-adsense-account" content="ca-pub-1212849269478012"></meta>
         <Script
           async
           strategy="afterInteractive"
