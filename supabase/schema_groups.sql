@@ -60,6 +60,12 @@ create policy "Usuário insere a si mesmo via rpc" on public.group_members
 create policy "Usuário pode sair do grupo" on public.group_members
   for delete using (player_id = auth.uid());
 
+create policy "Palpites só antes do jogo" on public.bets
+  for insert with check (
+    auth.uid()::text = player_id::text AND
+    (select match_date from public.games where id = game_id) > now()
+  );
+
 -- ===================================================
 -- Função: criar grupo (já adiciona o criador como membro)
 -- ===================================================

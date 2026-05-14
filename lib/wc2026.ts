@@ -59,7 +59,6 @@ export async function getAllMatches(): Promise<WC2026Match[]> {
   try {
     const response = await fetch(`${WC2026_API_BASE}/matches`, {
       next: { revalidate: 0 }, // Sem cache no Next.js
-      signal: AbortSignal.timeout(3000), // Desiste após 3 segundos
     })
 
     if (!response.ok) {
@@ -78,7 +77,6 @@ export async function getMatch(externalId: number): Promise<WC2026Match> {
   try {
     const response = await fetch(`${WC2026_API_BASE}/match/${externalId}`, {
       next: { revalidate: 0 },
-      signal: AbortSignal.timeout(5000),
     })
 
     if (!response.ok) {
@@ -97,7 +95,6 @@ export async function getTestMatch(): Promise<WC2026Match> {
   try {
     const response = await fetch(`${WC2026_API_BASE}/test/match`, {
       next: { revalidate: 0 },
-      signal: AbortSignal.timeout(5000),
     })
 
     if (!response.ok) {
@@ -116,7 +113,6 @@ export async function getGroupStandings(): Promise<WC2026GroupStandings[]> {
   try {
     const response = await fetch(`${WC2026_API_BASE}/standings`, {
       next: { revalidate: 0 },
-      signal: AbortSignal.timeout(5000),
     })
 
     if (!response.ok) {
