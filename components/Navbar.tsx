@@ -15,23 +15,17 @@ export function Navbar() {
     href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data } = await supabase.from('players').select('*').eq('id', session.user.id).single()
-        if (data) setPlayer(data)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          const { data } = await supabase.from('players')
+            .select('*').eq('id', session.user.id).single()
+          if (data) setPlayer(data)
+        } else {
+          setPlayer(null)
+        }
       }
-    }
-    checkSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const { data } = await supabase.from('players').select('*').eq('id', session.user.id).single()
-        if (data) setPlayer(data)
-      } else {
-        setPlayer(null)
-      }
-    })
+    )
     return () => subscription.unsubscribe()
   }, [])
 

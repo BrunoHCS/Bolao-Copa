@@ -48,9 +48,9 @@ export default function RegisterPage() {
       }, { onConflict: 'id' })
 
       if (profileErr) {
-        setError(profileErr.code === '23505'
-          ? 'Este nome de usuário já está em uso.'
-          : 'Erro ao criar perfil: ' + profileErr.message)
+        // deleta o usuário auth criado para não deixar órfão
+        await supabase.auth.signOut()
+        setError('Erro ao criar perfil. Tente novamente.')
         return
       }
 
