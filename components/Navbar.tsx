@@ -35,7 +35,7 @@ export function Navbar() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Close mobile menu on navigation
+  // Fecha o menu mobile ao navegar
   useEffect(() => {
     setMenuOpen(false)
   }, [pathname])
@@ -55,7 +55,7 @@ export function Navbar() {
           <span className="font-display" style={{ fontSize: '1.6rem', color: 'var(--gold)' }}> Copa 2026</span>
         </Link>
 
-        {/* Hamburger button - mobile only */}
+        {/* Botão hambúrguer — só mobile */}
         <button
           className="hamburger-btn"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -68,7 +68,7 @@ export function Navbar() {
           <span className={`hamburger-line ${menuOpen ? 'open' : ''}`} />
         </button>
 
-        {/* Desktop nav + Mobile dropdown */}
+        {/* Links desktop + dropdown mobile */}
         <div className={`nav-links ${menuOpen ? 'nav-open' : ''}`} id="nav-links">
           <NavLink href="/" active={isActive('/')}>Ranking</NavLink>
           {player && <NavLink href="/palpites" active={isActive('/palpites')}>Palpites</NavLink>}
@@ -82,14 +82,28 @@ export function Navbar() {
               <span className="font-ui" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                 {player.display_name}
               </span>
+              {/* ✅ button standalone — sem Link envolvendo */}
               <button onClick={handleLogout} className="btn-outline" style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}>
                 Sair
               </button>
             </div>
           ) : (
             <div className="nav-auth">
-              <Link href="/login"><button className="btn-outline" style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}>Entrar</button></Link>
-              <Link href="/registro"><button className="btn-primary" style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}>Cadastrar</button></Link>
+              {/* ✅ Link estilizado como botão — sem button aninhado */}
+              <Link
+                href="/login"
+                className="btn-outline"
+                style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                Entrar
+              </Link>
+              <Link
+                href="/registro"
+                className="btn-primary"
+                style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                Cadastrar
+              </Link>
             </div>
           )}
         </div>

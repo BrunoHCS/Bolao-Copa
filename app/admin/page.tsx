@@ -14,7 +14,6 @@ export default function AdminPage() {
   const [tab, setTab] = useState<'results' | 'new-game'>('results')
   const router = useRouter()
 
-  // New game form
   const [newGame, setNewGame] = useState({
     home_team: '', away_team: '', home_flag: '', away_flag: '',
     match_date: '', stage: 'Fase de Grupos',
@@ -22,10 +21,10 @@ export default function AdminPage() {
   const [addingGame, setAddingGame] = useState(false)
   const [gameMsg, setGameMsg] = useState('')
 
-  // Results
   const [results, setResults] = useState<Record<string, { home: string; away: string }>>({})
   const [savingResult, setSavingResult] = useState<string | null>(null)
 
+  // ✅ deps vazias — só roda na montagem
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -45,7 +44,7 @@ export default function AdminPage() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, []) // ✅ sem router nas deps
 
   const handleSaveResult = async (game: Game) => {
     const r = results[game.id]
@@ -61,7 +60,6 @@ export default function AdminPage() {
         is_finished: true,
       }).eq('id', game.id)
 
-      // Calculate points using the DB function
       await supabase.rpc('calculate_points', { game_id_param: game.id })
 
       setGames(prev => prev.map(g => g.id === game.id ? { ...g, home_score: homeScore, away_score: awayScore, is_finished: true } : g))
@@ -121,7 +119,6 @@ export default function AdminPage() {
           {games.map(game => (
             <div key={game.id} className="card" style={{ padding: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                {/* Game info */}
                 <div style={{ flex: 1, minWidth: '200px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ fontSize: '1.5rem' }}>{game.home_flag}</span>
@@ -135,7 +132,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Score inputs */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     className="input-score"
@@ -156,7 +152,6 @@ export default function AdminPage() {
                   />
                 </div>
 
-                {/* Status & Save */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {game.is_finished
                     ? <span className="badge badge-green">✓ Finalizado</span>

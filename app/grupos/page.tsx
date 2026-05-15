@@ -16,6 +16,7 @@ export default function GruposPage() {
   const [modal, setModal] = useState<Modal>('none')
   const router = useRouter()
 
+  // ✅ deps vazias — só roda na montagem
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -30,10 +31,9 @@ export default function GruposPage() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, []) // ✅ sem router nas deps
 
   const loadGroups = async (playerId: string) => {
-    // Busca grupos onde o player é membro
     const { data: memberships } = await supabase
       .from('group_members')
       .select('group_id')
@@ -51,7 +51,6 @@ export default function GruposPage() {
 
     if (!groupsData) { setGroups([]); return }
 
-    // Contar membros de cada grupo
     const { data: allMembers } = await supabase
       .from('group_members')
       .select('group_id, player_id')
@@ -265,12 +264,23 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
     if (!foundGroup || !password) return
     setJoining(true)
     try {
-      const { data } = await supabase.rpc('join_group', {
+      const { data, error: rpcError } = await supabase.rpc('join_group', {
         group_id_param: foundGroup.id,
         group_password: password,
       })
+
+      // ✅ Trata tanto retorno JSON quanto erros lançados pelo banco
+      if (rpcError) {
+        setError(rpcError.message ?? 'Erro ao entrar no grupo.')
+        return
+      }
+
       const result = data as { success: boolean; error?: string; group_name?: string }
-      if (!result.success) { setError(result.error ?? 'Erro ao entrar no grupo.'); return }
+      if (!result?.success) {
+        setError(result?.error ?? 'Erro ao entrar no grupo.')
+        return
+      }
+
       onJoined()
     } finally {
       setJoining(false)

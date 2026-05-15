@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
-import { format, isPast, addHours } from 'date-fns'
+import { format, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Adsense } from "@/components/Adsense";
 
@@ -17,6 +17,7 @@ export default function PalpitesPage() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
+  // ✅ deps vazias — só roda na montagem
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -48,7 +49,7 @@ export default function PalpitesPage() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, []) // ✅ sem router nas deps
 
   const isLocked = (game: Game) => isPast(new Date(game.match_date)) || game.is_finished
 
@@ -135,7 +136,7 @@ export default function PalpitesPage() {
         </div>
       )}
 
-      {/* Jogos finalizados com meus palpites */}
+      {/* Jogos finalizados */}
       {finishedGames.length > 0 && (
         <div>
           <SectionTitle>✅ Jogos Finalizados</SectionTitle>

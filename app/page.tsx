@@ -61,7 +61,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Main grid */}
+      {/* Grid principal */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
 
         {/* Ranking */}
@@ -72,8 +72,13 @@ export default function HomePage() {
               <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
                 <p>Nenhum participante ainda.</p>
-                <Link href="/registro">
-                  <button className="btn-primary" style={{ marginTop: '1rem', fontSize: '0.85rem', padding: '0.5rem 1.25rem' }}>Cadastrar agora</button>
+                {/* ✅ Link estilizado — sem button aninhado */}
+                <Link
+                  href="/registro"
+                  className="btn-primary"
+                  style={{ marginTop: '1rem', fontSize: '0.85rem', padding: '0.5rem 1.25rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  Cadastrar agora
                 </Link>
               </div>
             ) : (
@@ -117,10 +122,13 @@ export default function HomePage() {
               {upcomingGames.map(game => (
                 <GamePreview key={game.id} game={game} />
               ))}
-              <Link href="/palpites" style={{ textDecoration: 'none' }}>
-                <button className="btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-                  Ver todos e apostar →
-                </button>
+              {/* ✅ Link estilizado — sem button aninhado */}
+              <Link
+                href="/palpites"
+                className="btn-primary"
+                style={{ width: '100%', marginTop: '0.5rem', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                Ver todos e apostar →
               </Link>
             </div>
           )}
