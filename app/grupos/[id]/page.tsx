@@ -21,49 +21,62 @@ export default function GroupDetailPage() {
   const [copyMsg, setCopyMsg] = useState('')
 
   useEffect(() => {
+    let isMounted = true
+
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!isMounted) return
+        if (!session) { router.push('/login'); return }
 
-      const { data: playerData } = await supabase
-        .from('players').select('*').eq('id', session.user.id).single()
-      if (!playerData) { router.push('/login'); return }
-      setCurrentPlayer(playerData)
+        const { data: playerData } = await supabase
+          .from('players').select('*').eq('id', session.user.id).single()
 
-      // Verifica se é membro (RLS já bloqueia se não for)
-      const { data: groupData, error } = await supabase
-        .from('groups').select('*').eq('id', groupId).single()
+        if (!isMounted) return
+        if (!playerData) { router.push('/login'); return }
+        setCurrentPlayer(playerData)
 
-      if (error || !groupData) {
-        // Não é membro ou grupo não existe
-        router.push('/grupos')
-        return
+        const { data: groupData, error } = await supabase
+          .from('groups').select('*').eq('id', groupId).single()
+
+        if (!isMounted) return
+        if (error || !groupData) {
+          router.push('/grupos')
+          return
+        }
+        setGroup(groupData)
+
+        const { data: memberships } = await supabase
+          .from('group_members')
+          .select('player_id, joined_at')
+          .eq('group_id', groupId)
+
+        if (!isMounted) return
+        if (!memberships?.length) { setLoading(false); return }
+
+        const playerIds = memberships.map(m => m.player_id)
+        const { data: playersData } = await supabase
+          .from('players')
+          .select('*')
+          .in('id', playerIds)
+          .order('total_points', { ascending: false })
+
+        if (!isMounted) return
+
+        const joinedAtMap: Record<string, string> = {}
+        for (const m of memberships) joinedAtMap[m.player_id] = m.joined_at
+
+        setMembers((playersData ?? []).map(p => ({ ...p, joined_at: joinedAtMap[p.id] ?? '' })))
+        setLoading(false)
+      } catch (err) {
+        console.error('Erro ao carregar grupo:', err)
+        if (isMounted) setLoading(false)
       }
-      setGroup(groupData)
-
-      // Buscar membros com pontos
-      const { data: memberships } = await supabase
-        .from('group_members')
-        .select('player_id, joined_at')
-        .eq('group_id', groupId)
-
-      if (!memberships?.length) { setLoading(false); return }
-
-      const playerIds = memberships.map(m => m.player_id)
-      const { data: playersData } = await supabase
-        .from('players')
-        .select('*')
-        .in('id', playerIds)
-        .order('total_points', { ascending: false })
-
-      const joinedAtMap: Record<string, string> = {}
-      for (const m of memberships) joinedAtMap[m.player_id] = m.joined_at
-
-      setMembers((playersData ?? []).map(p => ({ ...p, joined_at: joinedAtMap[p.id] ?? '' })))
-      setLoading(false)
     }
+
     load()
-  }, [groupId, router])
+    return () => { isMounted = false }
+  }, [groupId])
 
   const handleLeave = async () => {
     if (!currentPlayer) return
@@ -113,7 +126,6 @@ export default function GroupDetailPage() {
           )}
         </div>
 
-        {/* Ações */}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {!isOwner && (
             <button
@@ -164,9 +176,9 @@ export default function GroupDetailPage() {
                 borderLeft: member.id === currentPlayer?.id
                   ? '3px solid rgba(0,214,79,0.5)'
                   : i === 0 ? '3px solid var(--gold)'
-                  : i === 1 ? '3px solid #c0c0c0'
-                  : i === 2 ? '3px solid #cd7f32'
-                  : '3px solid transparent',
+                    : i === 1 ? '3px solid #c0c0c0'
+                      : i === 2 ? '3px solid #cd7f32'
+                        : '3px solid transparent',
               }}
             >
               <div style={{ textAlign: 'center' }}>

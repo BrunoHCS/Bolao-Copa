@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { supabase, Player, Group } from '@/lib/supabase'
 
 type GroupWithMeta = Group & { member_count: number; is_owner: boolean }
-
 type Modal = 'none' | 'create' | 'join'
 
 export default function GruposPage() {
@@ -16,29 +15,41 @@ export default function GruposPage() {
   const [modal, setModal] = useState<Modal>('none')
   const router = useRouter()
 
-  // ✅ deps vazias — só roda na montagem
   useEffect(() => {
+    let isMounted = true
+
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!isMounted) return
+        if (!session) { router.push('/login'); return }
 
-      const { data: playerData } = await supabase
-        .from('players').select('*').eq('id', session.user.id).single()
-      if (!playerData) { router.push('/login'); return }
-      setPlayer(playerData)
+        const { data: playerData } = await supabase
+          .from('players').select('*').eq('id', session.user.id).single()
 
-      await loadGroups(session.user.id)
-      setLoading(false)
+        if (!isMounted) return
+        if (!playerData) { router.push('/login'); return }
+        setPlayer(playerData)
+
+        await loadGroups(session.user.id, isMounted)
+        if (isMounted) setLoading(false)
+      } catch (err) {
+        console.error('Erro ao carregar grupos:', err)
+        if (isMounted) setLoading(false)
+      }
     }
-    load()
-  }, []) // ✅ sem router nas deps
 
-  const loadGroups = async (playerId: string) => {
+    load()
+    return () => { isMounted = false }
+  }, [])
+
+  const loadGroups = async (playerId: string, isMounted = true) => {
     const { data: memberships } = await supabase
       .from('group_members')
       .select('group_id')
       .eq('player_id', playerId)
 
+    if (!isMounted) return
     if (!memberships?.length) { setGroups([]); return }
 
     const groupIds = memberships.map(m => m.group_id)
@@ -49,12 +60,15 @@ export default function GruposPage() {
       .in('id', groupIds)
       .order('created_at', { ascending: false })
 
+    if (!isMounted) return
     if (!groupsData) { setGroups([]); return }
 
     const { data: allMembers } = await supabase
       .from('group_members')
       .select('group_id, player_id')
       .in('group_id', groupIds)
+
+    if (!isMounted) return
 
     const countMap: Record<string, number> = {}
     for (const m of allMembers ?? []) {
@@ -269,7 +283,6 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
         group_password: password,
       })
 
-      // ✅ Trata tanto retorno JSON quanto erros lançados pelo banco
       if (rpcError) {
         setError(rpcError.message ?? 'Erro ao entrar no grupo.')
         return
@@ -296,7 +309,6 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
         Busque pelo nome exato do grupo e insira a senha.
       </p>
 
-      {/* Busca */}
       <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
         <input
           className="input"
@@ -312,7 +324,6 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
 
       {searchError && <ErrorBox>{searchError}</ErrorBox>}
 
-      {/* Grupo encontrado */}
       {foundGroup && (
         <div>
           <div style={{ background: 'rgba(0,214,79,0.07)', border: '1px solid rgba(0,214,79,0.25)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>

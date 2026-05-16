@@ -17,39 +17,51 @@ export default function PalpitesPage() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // ✅ deps vazias — só roda na montagem
   useEffect(() => {
+    let isMounted = true
+
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!isMounted) return
+        if (!session) { router.push('/login'); return }
 
-      const [{ data: playerData }, { data: gamesData }] = await Promise.all([
-        supabase.from('players').select('*').eq('id', session.user.id).single(),
-        supabase.from('games').select('*').order('match_date', { ascending: true }),
-      ])
+        const [{ data: playerData }, { data: gamesData }] = await Promise.all([
+          supabase.from('players').select('*').eq('id', session.user.id).single(),
+          supabase.from('games').select('*').order('match_date', { ascending: true }),
+        ])
 
-      if (!playerData) { router.push('/login'); return }
-      setPlayer(playerData)
+        if (!isMounted) return
+        if (!playerData) { router.push('/login'); return }
+        setPlayer(playerData)
 
-      const { data: betsData } = await supabase
-        .from('bets')
-        .select('*')
-        .eq('player_id', session.user.id)
+        const { data: betsData } = await supabase
+          .from('bets')
+          .select('*')
+          .eq('player_id', session.user.id)
 
-      const betsMap: Record<string, Bet> = {}
-      const draftsInit: Record<string, { home: string; away: string }> = {}
-      for (const b of betsData ?? []) {
-        betsMap[b.game_id] = b
-        draftsInit[b.game_id] = { home: String(b.home_score), away: String(b.away_score) }
+        if (!isMounted) return
+
+        const betsMap: Record<string, Bet> = {}
+        const draftsInit: Record<string, { home: string; away: string }> = {}
+        for (const b of betsData ?? []) {
+          betsMap[b.game_id] = b
+          draftsInit[b.game_id] = { home: String(b.home_score), away: String(b.away_score) }
+        }
+
+        setGames(gamesData ?? [])
+        setBets(betsMap)
+        setDrafts(draftsInit)
+        setLoading(false)
+      } catch (err) {
+        console.error('Erro ao carregar palpites:', err)
+        if (isMounted) setLoading(false)
       }
-
-      setGames(gamesData ?? [])
-      setBets(betsMap)
-      setDrafts(draftsInit)
-      setLoading(false)
     }
+
     load()
-  }, []) // ✅ sem router nas deps
+    return () => { isMounted = false }
+  }, [])
 
   const isLocked = (game: Game) => isPast(new Date(game.match_date)) || game.is_finished
 

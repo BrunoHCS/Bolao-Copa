@@ -24,27 +24,47 @@ export default function AdminPage() {
   const [results, setResults] = useState<Record<string, { home: string; away: string }>>({})
   const [savingResult, setSavingResult] = useState<string | null>(null)
 
-  // ✅ deps vazias — só roda na montagem
   useEffect(() => {
+    let isMounted = true
+
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const { data: playerData } = await supabase.from('players').select('*').eq('id', session.user.id).single()
-      if (!playerData?.is_admin) { router.push('/'); return }
-      setPlayer(playerData)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!isMounted) return
+        if (!session) { router.push('/login'); return }
 
-      const { data: gamesData } = await supabase.from('games').select('*').order('match_date', { ascending: true })
-      setGames(gamesData ?? [])
+        const { data: playerData } = await supabase
+          .from('players').select('*').eq('id', session.user.id).single()
 
-      const initResults: Record<string, { home: string; away: string }> = {}
-      for (const g of gamesData ?? []) {
-        initResults[g.id] = { home: g.home_score != null ? String(g.home_score) : '', away: g.away_score != null ? String(g.away_score) : '' }
+        if (!isMounted) return
+        if (!playerData?.is_admin) { router.push('/'); return }
+        setPlayer(playerData)
+
+        const { data: gamesData } = await supabase
+          .from('games').select('*').order('match_date', { ascending: true })
+
+        if (!isMounted) return
+
+        setGames(gamesData ?? [])
+
+        const initResults: Record<string, { home: string; away: string }> = {}
+        for (const g of gamesData ?? []) {
+          initResults[g.id] = {
+            home: g.home_score != null ? String(g.home_score) : '',
+            away: g.away_score != null ? String(g.away_score) : '',
+          }
+        }
+        setResults(initResults)
+        setLoading(false)
+      } catch (err) {
+        console.error('Erro ao carregar admin:', err)
+        if (isMounted) setLoading(false)
       }
-      setResults(initResults)
-      setLoading(false)
     }
+
     load()
-  }, []) // ✅ sem router nas deps
+    return () => { isMounted = false }
+  }, [])
 
   const handleSaveResult = async (game: Game) => {
     const r = results[game.id]
@@ -62,7 +82,10 @@ export default function AdminPage() {
 
       await supabase.rpc('calculate_points', { game_id_param: game.id })
 
-      setGames(prev => prev.map(g => g.id === game.id ? { ...g, home_score: homeScore, away_score: awayScore, is_finished: true } : g))
+      setGames(prev => prev.map(g => g.id === game.id
+        ? { ...g, home_score: homeScore, away_score: awayScore, is_finished: true }
+        : g
+      ))
     } finally {
       setSavingResult(null)
     }
@@ -138,7 +161,7 @@ export default function AdminPage() {
                     style={{ width: '3.5rem', fontSize: '1.5rem' }}
                     type="number" min="0" max="99"
                     value={results[game.id]?.home ?? ''}
-                    onChange={e => setResults(prev => ({ ...prev, [game.id]: { ...prev[game.id], home: e.target.value.replace(/\D/g, '').slice(0,2) } }))}
+                    onChange={e => setResults(prev => ({ ...prev, [game.id]: { ...prev[game.id], home: e.target.value.replace(/\D/g, '').slice(0, 2) } }))}
                     placeholder="–"
                   />
                   <span className="font-display" style={{ color: 'var(--text-muted)' }}>×</span>
@@ -147,7 +170,7 @@ export default function AdminPage() {
                     style={{ width: '3.5rem', fontSize: '1.5rem' }}
                     type="number" min="0" max="99"
                     value={results[game.id]?.away ?? ''}
-                    onChange={e => setResults(prev => ({ ...prev, [game.id]: { ...prev[game.id], away: e.target.value.replace(/\D/g, '').slice(0,2) } }))}
+                    onChange={e => setResults(prev => ({ ...prev, [game.id]: { ...prev[game.id], away: e.target.value.replace(/\D/g, '').slice(0, 2) } }))}
                     placeholder="–"
                   />
                 </div>
