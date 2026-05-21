@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Adsense } from "@/components/Adsense";
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -93,7 +92,6 @@ export default function LoginPage() {
           </Link>
         </div>
       </div>
-      <Adsense />
     </div>
   )
 }

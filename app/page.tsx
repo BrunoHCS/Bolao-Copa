@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Adsense } from "@/components/Adsense";
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -160,7 +159,6 @@ export default function HomePage() {
 
       {/* Últimos resultados */}
       <FinishedGames games={games} bets={bets} players={players} />
-      <Adsense />
     </div>
   )
 }

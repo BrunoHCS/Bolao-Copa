@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
 import { format, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Adsense } from "@/components/Adsense";
 
 export default function PalpitesPage() {
   const [player, setPlayer] = useState<Player | null>(null)
@@ -178,7 +177,6 @@ export default function PalpitesPage() {
           </div>
         </div>
       )}
-      <Adsense />
     </div>
   )
 }

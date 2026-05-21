@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Adsense } from "@/components/Adsense";
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('')
@@ -25,11 +24,8 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const cleanUsername = username.toLowerCase().trim()
-      // IMPORTANTE: o domínio aqui deve ser IDÊNTICO ao usado no login/page.tsx
-      // Qualquer diferença cria uma conta diferente no Supabase Auth.
       const email = `${cleanUsername}@bolao2026.app`
 
-      // Criar usuário no Supabase Auth
       const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password })
 
       if (authErr) {
@@ -51,7 +47,6 @@ export default function RegisterPage() {
         return
       }
 
-      // Upsert do perfil (tolera player órfão de deleção anterior no painel)
       const { error: profileErr } = await supabase.from('players').upsert({
         id: authData.user.id,
         username: cleanUsername,
@@ -67,10 +62,8 @@ export default function RegisterPage() {
         return
       }
 
-      // signUp nem sempre estabelece sessão — força o login explicitamente
       const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
       if (loginErr) {
-        // Conta criada mas sessão falhou — manda pro login
         router.push('/login')
         return
       }
@@ -180,7 +173,6 @@ export default function RegisterPage() {
           <ScoreRule pts="0 pts" desc="Errou o resultado" color="var(--text-muted)" />
         </div>
       </div>
-      <Adsense />
     </div>
   )
 }

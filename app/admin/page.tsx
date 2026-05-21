@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { supabase, Player, Game } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Adsense } from "@/components/Adsense";
 
 export default function AdminPage() {
   const [player, setPlayer] = useState<Player | null>(null)
@@ -247,7 +246,6 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      <Adsense />
     </div>
   )
 }
