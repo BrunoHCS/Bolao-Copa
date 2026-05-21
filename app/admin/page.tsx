@@ -29,35 +29,51 @@ export default function AdminPage() {
 
     const load = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!isMounted) return
-        if (!session) { router.push('/login'); return }
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-        const { data: playerData } = await supabase
+        if (!isMounted) return
+
+        if (sessionError || !session) {
+          router.push('/login')
+          return
+        }
+
+        const { data: playerData, error: playerError } = await supabase
           .from('players').select('*').eq('id', session.user.id).single()
 
         if (!isMounted) return
-        if (!playerData?.is_admin) { router.push('/'); return }
+
+        if (playerError || !playerData?.is_admin) {
+          router.push('/')
+          return
+        }
+
         setPlayer(playerData)
 
-        const { data: gamesData } = await supabase
+        const { data: gamesData, error: gamesError } = await supabase
           .from('games').select('*').order('match_date', { ascending: true })
 
         if (!isMounted) return
 
-        setGames(gamesData ?? [])
+        if (gamesError) {
+          console.error('Erro ao carregar jogos:', gamesError)
+        }
+
+        const gamesList = gamesData ?? []
+        setGames(gamesList)
 
         const initResults: Record<string, { home: string; away: string }> = {}
-        for (const g of gamesData ?? []) {
+        for (const g of gamesList) {
           initResults[g.id] = {
             home: g.home_score != null ? String(g.home_score) : '',
             away: g.away_score != null ? String(g.away_score) : '',
           }
         }
         setResults(initResults)
-        setLoading(false)
       } catch (err) {
-        console.error('Erro ao carregar admin:', err)
+        console.error('Erro inesperado ao carregar admin:', err)
+        if (isMounted) router.push('/')
+      } finally {
         if (isMounted) setLoading(false)
       }
     }

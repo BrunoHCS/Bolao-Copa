@@ -14,18 +14,30 @@ export default function HomePage() {
   const [games, setGames] = useState<Game[]>([])
   const [bets, setBets] = useState<Bet[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: ps }, { data: gs }, { data: bs }] = await Promise.all([
-        supabase.from('players').select('*').order('total_points', { ascending: false }),
-        supabase.from('games').select('*').order('match_date', { ascending: true }),
-        supabase.from('bets').select('*'),
-      ])
-      setPlayers(ps ?? [])
-      setGames(gs ?? [])
-      setBets(bs ?? [])
-      setLoading(false)
+      try {
+        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, { data: bs, error: e3 }] = await Promise.all([
+          supabase.from('players').select('*').order('total_points', { ascending: false }),
+          supabase.from('games').select('*').order('match_date', { ascending: true }),
+          supabase.from('bets').select('*'),
+        ])
+        if (e1 || e2 || e3) {
+          console.error('Erro ao carregar dados:', e1 ?? e2 ?? e3)
+          setError(true)
+          return
+        }
+        setPlayers(ps ?? [])
+        setGames(gs ?? [])
+        setBets(bs ?? [])
+      } catch (err) {
+        console.error('Erro inesperado ao carregar dados:', err)
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])
@@ -33,6 +45,19 @@ export default function HomePage() {
   const upcomingGames = games.filter(g => !g.is_finished).slice(0, 4)
 
   if (loading) return <LoadingScreen />
+
+  if (error) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '1rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem' }}>😵</div>
+        <h2 className="font-display" style={{ fontSize: '1.8rem' }}>Erro ao carregar dados</h2>
+        <p style={{ color: 'var(--text-secondary)', maxWidth: '380px' }}>
+          Não foi possível conectar ao servidor. Verifique sua conexão e tente recarregar a página.
+        </p>
+        <button className="btn-primary" onClick={() => window.location.reload()}>↻ Recarregar</button>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
@@ -72,7 +97,6 @@ export default function HomePage() {
               <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
                 <p>Nenhum participante ainda.</p>
-                {/* ✅ Link estilizado — sem button aninhado */}
                 <Link
                   href="/registro"
                   className="btn-primary"
@@ -122,7 +146,6 @@ export default function HomePage() {
               {upcomingGames.map(game => (
                 <GamePreview key={game.id} game={game} />
               ))}
-              {/* ✅ Link estilizado — sem button aninhado */}
               <Link
                 href="/palpites"
                 className="btn-primary"

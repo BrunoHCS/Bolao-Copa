@@ -25,37 +25,55 @@ export default function GroupDetailPage() {
 
     const load = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!isMounted) return
-        if (!session) { router.push('/login'); return }
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-        const { data: playerData } = await supabase
+        if (!isMounted) return
+
+        if (sessionError || !session) {
+          router.push('/login')
+          return
+        }
+
+        const { data: playerData, error: playerError } = await supabase
           .from('players').select('*').eq('id', session.user.id).single()
 
         if (!isMounted) return
-        if (!playerData) { router.push('/login'); return }
+
+        if (playerError || !playerData) {
+          router.push('/login')
+          return
+        }
+
         setCurrentPlayer(playerData)
 
-        const { data: groupData, error } = await supabase
+        const { data: groupData, error: groupError } = await supabase
           .from('groups').select('*').eq('id', groupId).single()
 
         if (!isMounted) return
-        if (error || !groupData) {
+
+        if (groupError || !groupData) {
           router.push('/grupos')
           return
         }
+
         setGroup(groupData)
 
-        const { data: memberships } = await supabase
+        const { data: memberships, error: membErr } = await supabase
           .from('group_members')
           .select('player_id, joined_at')
           .eq('group_id', groupId)
 
         if (!isMounted) return
-        if (!memberships?.length) { setLoading(false); return }
+
+        if (membErr) {
+          console.error('Erro ao carregar membros:', membErr)
+          return
+        }
+
+        if (!memberships?.length) return
 
         const playerIds = memberships.map(m => m.player_id)
-        const { data: playersData } = await supabase
+        const { data: playersData, error: playersErr } = await supabase
           .from('players')
           .select('*')
           .in('id', playerIds)
@@ -63,13 +81,19 @@ export default function GroupDetailPage() {
 
         if (!isMounted) return
 
+        if (playersErr) {
+          console.error('Erro ao carregar jogadores do grupo:', playersErr)
+          return
+        }
+
         const joinedAtMap: Record<string, string> = {}
         for (const m of memberships) joinedAtMap[m.player_id] = m.joined_at
 
         setMembers((playersData ?? []).map(p => ({ ...p, joined_at: joinedAtMap[p.id] ?? '' })))
-        setLoading(false)
       } catch (err) {
-        console.error('Erro ao carregar grupo:', err)
+        console.error('Erro inesperado ao carregar grupo:', err)
+        if (isMounted) router.push('/grupos')
+      } finally {
         if (isMounted) setLoading(false)
       }
     }

@@ -25,18 +25,20 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const cleanUsername = username.toLowerCase().trim()
-      // Use example.com — it's an IANA-reserved domain with valid MX records,
-      // so Supabase's domain validation accepts it without sending real emails.
-      const email = `${cleanUsername}@example.com`
+      // IMPORTANTE: o domínio aqui deve ser IDÊNTICO ao usado no login/page.tsx
+      // Qualquer diferença cria uma conta diferente no Supabase Auth.
+      const email = `${cleanUsername}@bolao2026.app`
 
       // Criar usuário no Supabase Auth
       const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password })
 
       if (authErr) {
         const msg = authErr.message ?? ''
-        if (msg.includes('already registered') || msg.includes('User already registered')) {
-          setError('Este nome de usuário já está em uso.')
-        } else if (authErr.status === 422 || msg.includes('Invalid') || msg.includes('invalid')) {
+        if (
+          msg.includes('already registered') ||
+          msg.includes('User already registered') ||
+          authErr.status === 422
+        ) {
           setError('Este nome de usuário já está em uso.')
         } else {
           setError(msg || 'Erro ao criar conta.')
@@ -75,8 +77,6 @@ export default function RegisterPage() {
 
       router.push('/palpites')
     } catch (err: unknown) {
-      // Catch any unexpected throw from the Supabase client (e.g. network errors)
-      // so the loading spinner always stops and the user sees an error message.
       const message = err instanceof Error ? err.message : ''
       if (message.includes('already registered')) {
         setError('Este nome de usuário já está em uso.')

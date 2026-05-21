@@ -22,25 +22,43 @@ export default function PalpitesPage() {
 
     const load = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!isMounted) return
-        if (!session) { router.push('/login'); return }
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-        const [{ data: playerData }, { data: gamesData }] = await Promise.all([
+        if (!isMounted) return
+
+        if (sessionError || !session) {
+          router.push('/login')
+          return
+        }
+
+        const [{ data: playerData, error: playerError }, { data: gamesData, error: gamesError }] = await Promise.all([
           supabase.from('players').select('*').eq('id', session.user.id).single(),
           supabase.from('games').select('*').order('match_date', { ascending: true }),
         ])
 
         if (!isMounted) return
-        if (!playerData) { router.push('/login'); return }
+
+        if (playerError || !playerData) {
+          router.push('/login')
+          return
+        }
+
+        if (gamesError) {
+          console.error('Erro ao carregar jogos:', gamesError)
+        }
+
         setPlayer(playerData)
 
-        const { data: betsData } = await supabase
+        const { data: betsData, error: betsError } = await supabase
           .from('bets')
           .select('*')
           .eq('player_id', session.user.id)
 
         if (!isMounted) return
+
+        if (betsError) {
+          console.error('Erro ao carregar palpites:', betsError)
+        }
 
         const betsMap: Record<string, Bet> = {}
         const draftsInit: Record<string, { home: string; away: string }> = {}
@@ -52,9 +70,10 @@ export default function PalpitesPage() {
         setGames(gamesData ?? [])
         setBets(betsMap)
         setDrafts(draftsInit)
-        setLoading(false)
       } catch (err) {
-        console.error('Erro ao carregar palpites:', err)
+        console.error('Erro inesperado ao carregar palpites:', err)
+        if (isMounted) router.push('/login')
+      } finally {
         if (isMounted) setLoading(false)
       }
     }

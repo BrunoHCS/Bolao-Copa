@@ -20,21 +20,30 @@ export default function GruposPage() {
 
     const load = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!isMounted) return
-        if (!session) { router.push('/login'); return }
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-        const { data: playerData } = await supabase
+        if (!isMounted) return
+
+        if (sessionError || !session) {
+          router.push('/login')
+          return
+        }
+
+        const { data: playerData, error: playerError } = await supabase
           .from('players').select('*').eq('id', session.user.id).single()
 
         if (!isMounted) return
-        if (!playerData) { router.push('/login'); return }
-        setPlayer(playerData)
 
+        if (playerError || !playerData) {
+          router.push('/login')
+          return
+        }
+
+        setPlayer(playerData)
         await loadGroups(session.user.id, isMounted)
-        if (isMounted) setLoading(false)
       } catch (err) {
         console.error('Erro ao carregar grupos:', err)
+      } finally {
         if (isMounted) setLoading(false)
       }
     }
@@ -44,42 +53,48 @@ export default function GruposPage() {
   }, [])
 
   const loadGroups = async (playerId: string, isMounted = true) => {
-    const { data: memberships } = await supabase
-      .from('group_members')
-      .select('group_id')
-      .eq('player_id', playerId)
+    try {
+      const { data: memberships, error: membErr } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('player_id', playerId)
 
-    if (!isMounted) return
-    if (!memberships?.length) { setGroups([]); return }
+      if (!isMounted) return
+      if (membErr) { console.error('Erro ao carregar memberships:', membErr); return }
+      if (!memberships?.length) { setGroups([]); return }
 
-    const groupIds = memberships.map(m => m.group_id)
+      const groupIds = memberships.map(m => m.group_id)
 
-    const { data: groupsData } = await supabase
-      .from('groups')
-      .select('*')
-      .in('id', groupIds)
-      .order('created_at', { ascending: false })
+      const { data: groupsData, error: groupsErr } = await supabase
+        .from('groups')
+        .select('*')
+        .in('id', groupIds)
+        .order('created_at', { ascending: false })
 
-    if (!isMounted) return
-    if (!groupsData) { setGroups([]); return }
+      if (!isMounted) return
+      if (groupsErr) { console.error('Erro ao carregar grupos:', groupsErr); return }
+      if (!groupsData) { setGroups([]); return }
 
-    const { data: allMembers } = await supabase
-      .from('group_members')
-      .select('group_id, player_id')
-      .in('group_id', groupIds)
+      const { data: allMembers } = await supabase
+        .from('group_members')
+        .select('group_id, player_id')
+        .in('group_id', groupIds)
 
-    if (!isMounted) return
+      if (!isMounted) return
 
-    const countMap: Record<string, number> = {}
-    for (const m of allMembers ?? []) {
-      countMap[m.group_id] = (countMap[m.group_id] ?? 0) + 1
+      const countMap: Record<string, number> = {}
+      for (const m of allMembers ?? []) {
+        countMap[m.group_id] = (countMap[m.group_id] ?? 0) + 1
+      }
+
+      setGroups(groupsData.map(g => ({
+        ...g,
+        member_count: countMap[g.id] ?? 0,
+        is_owner: g.owner_id === playerId,
+      })))
+    } catch (err) {
+      console.error('Erro inesperado ao carregar grupos:', err)
     }
-
-    setGroups(groupsData.map(g => ({
-      ...g,
-      member_count: countMap[g.id] ?? 0,
-      is_owner: g.owner_id === playerId,
-    })))
   }
 
   const handleGroupCreated = async (groupId: string) => {

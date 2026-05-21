@@ -16,22 +16,66 @@ export function Navbar() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data } = await supabase.from('players').select('*').eq('id', session.user.id).single()
-        if (data) setPlayer(data)
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        // Sessão corrompida ou inválida: faz signOut para limpar o localStorage
+        if (sessionError) {
+          console.warn('Sessão inválida detectada, limpando...', sessionError.message)
+          await supabase.auth.signOut()
+          setPlayer(null)
+          return
+        }
+
+        if (session?.user) {
+          const { data, error: playerError } = await supabase
+            .from('players')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+
+          if (playerError) {
+            // Usuário autenticado mas sem perfil — sessão inconsistente
+            console.warn('Perfil não encontrado para sessão ativa, limpando...')
+            await supabase.auth.signOut()
+            setPlayer(null)
+            return
+          }
+
+          if (data) setPlayer(data)
+        }
+      } catch (err) {
+        console.error('Erro inesperado ao verificar sessão:', err)
+        // Em caso de erro total, limpa a sessão para evitar loops
+        try { await supabase.auth.signOut() } catch { /* ignora */ }
+        setPlayer(null)
       }
     }
+
     checkSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const { data } = await supabase.from('players').select('*').eq('id', session.user.id).single()
-        if (data) setPlayer(data)
+        try {
+          const { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+
+          if (error || !data) {
+            setPlayer(null)
+          } else {
+            setPlayer(data)
+          }
+        } catch {
+          setPlayer(null)
+        }
       } else {
         setPlayer(null)
       }
     })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -82,14 +126,12 @@ export function Navbar() {
               <span className="font-ui" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                 {player.display_name}
               </span>
-              {/* ✅ button standalone — sem Link envolvendo */}
               <button onClick={handleLogout} className="btn-outline" style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}>
                 Sair
               </button>
             </div>
           ) : (
             <div className="nav-auth">
-              {/* ✅ Link estilizado como botão — sem button aninhado */}
               <Link
                 href="/login"
                 className="btn-outline"
