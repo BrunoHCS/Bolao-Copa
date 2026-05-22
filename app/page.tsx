@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
+import { withTimeout } from '@/lib/auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -18,11 +19,19 @@ export default function HomePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, { data: bs, error: e3 }] = await Promise.all([
+        const result = await withTimeout(Promise.all([
           supabase.from('players').select('*').order('total_points', { ascending: false }),
           supabase.from('games').select('*').order('match_date', { ascending: true }),
           supabase.from('bets').select('*'),
-        ])
+        ]))
+
+        if (result.error || !result.data) {
+          console.error('Erro ao carregar dados:', result.error)
+          setError(true)
+          return
+        }
+
+        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, { data: bs, error: e3 }] = result.data
         if (e1 || e2 || e3) {
           console.error('Erro ao carregar dados:', e1 ?? e2 ?? e3)
           setError(true)
@@ -158,7 +167,7 @@ export default function HomePage() {
       </div>
 
       {/* Últimos resultados */}
-      <FinishedGames games={games} bets={bets} players={players} />
+      <FinishedGames games={games} bets={bets} />
     </div>
   )
 }
@@ -199,7 +208,7 @@ function TeamDisplay({ flag, name, align }: { flag: string; name: string; align:
   )
 }
 
-function FinishedGames({ games, bets, players }: { games: Game[]; bets: Bet[]; players: Player[] }) {
+function FinishedGames({ games, bets }: { games: Game[]; bets: Bet[] }) {
   const finished = games.filter(g => g.is_finished)
   if (finished.length === 0) return null
 

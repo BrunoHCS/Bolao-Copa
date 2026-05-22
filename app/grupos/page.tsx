@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Player, Group } from '@/lib/supabase'
+import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
 
 type GroupWithMeta = Group & { member_count: number; is_owner: boolean }
 type Modal = 'none' | 'create' | 'join'
@@ -15,44 +16,7 @@ export default function GruposPage() {
   const [modal, setModal] = useState<Modal>('none')
   const router = useRouter()
 
-  useEffect(() => {
-    let isMounted = true
-
-    const load = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-        if (!isMounted) return
-
-        if (sessionError || !session) {
-          router.push('/login')
-          return
-        }
-
-        const { data: playerData, error: playerError } = await supabase
-          .from('players').select('*').eq('id', session.user.id).single()
-
-        if (!isMounted) return
-
-        if (playerError || !playerData) {
-          router.push('/login')
-          return
-        }
-
-        setPlayer(playerData)
-        await loadGroups(session.user.id, isMounted)
-      } catch (err) {
-        console.error('Erro ao carregar grupos:', err)
-      } finally {
-        if (isMounted) setLoading(false)
-      }
-    }
-
-    load()
-    return () => { isMounted = false }
-  }, [])
-
-  const loadGroups = async (playerId: string, isMounted = true) => {
+  const loadGroups = useCallback(async (playerId: string, isMounted = true) => {
     try {
       const { data: memberships, error: membErr } = await supabase
         .from('group_members')
@@ -95,7 +59,47 @@ export default function GruposPage() {
     } catch (err) {
       console.error('Erro inesperado ao carregar grupos:', err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const load = async () => {
+      try {
+        const sessionResult = await getCurrentSessionSafe()
+
+        if (!isMounted) return
+
+        if (sessionResult.error || sessionResult.timedOut || !sessionResult.data) {
+          if (sessionResult.error || sessionResult.timedOut) await clearLocalAuthState()
+          setLoading(false)
+          router.push('/login')
+          return
+        }
+
+        const session = sessionResult.data
+        const playerResult = await getPlayerForSessionSafe(session)
+
+        if (!isMounted) return
+
+        if (playerResult.error || !playerResult.data) {
+          setLoading(false)
+          router.push('/login')
+          return
+        }
+
+        setPlayer(playerResult.data)
+        await loadGroups(session.user.id, isMounted)
+      } catch (err) {
+        console.error('Erro ao carregar grupos:', err)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { isMounted = false }
+  }, [loadGroups, router])
 
   const handleGroupCreated = async (groupId: string) => {
     setModal('none')

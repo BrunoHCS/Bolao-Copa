@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Player, Group, Game, Bet } from '@/lib/supabase'
+import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
 import { format, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -34,15 +35,23 @@ export default function GroupDetailPage() {
 
     const load = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const sessionResult = await getCurrentSessionSafe()
         if (!isMounted) return
-        if (sessionError || !session) { router.push('/login'); return }
+        if (sessionResult.error || sessionResult.timedOut || !sessionResult.data) {
+          if (sessionResult.error || sessionResult.timedOut) await clearLocalAuthState()
+          setLoading(false)
+          router.push('/login')
+          return
+        }
 
-        const { data: playerData, error: playerError } = await supabase
-          .from('players').select('*').eq('id', session.user.id).single()
+        const playerResult = await getPlayerForSessionSafe(sessionResult.data)
         if (!isMounted) return
-        if (playerError || !playerData) { router.push('/login'); return }
-        setCurrentPlayer(playerData)
+        if (playerResult.error || !playerResult.data) {
+          setLoading(false)
+          router.push('/login')
+          return
+        }
+        setCurrentPlayer(playerResult.data)
 
         const { data: groupData, error: groupError } = await supabase
           .from('groups').select('*').eq('id', groupId).single()
@@ -111,7 +120,7 @@ export default function GroupDetailPage() {
 
     load()
     return () => { isMounted = false }
-  }, [groupId])
+  }, [groupId, router])
 
   const handleLeave = async () => {
     if (!currentPlayer) return
@@ -181,7 +190,7 @@ export default function GroupDetailPage() {
             📢 Convide seus amigos
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Compartilhe o nome <strong style={{ color: 'var(--text-primary)' }}>"{group.name}"</strong> e a senha do grupo. Eles entram em <strong style={{ color: 'var(--green)' }}>Grupos → Entrar em grupo</strong>.
+            Compartilhe o nome <strong style={{ color: 'var(--text-primary)' }}>&quot;{group.name}&quot;</strong> e a senha do grupo. Eles entram em <strong style={{ color: 'var(--green)' }}>Grupos → Entrar em grupo</strong>.
           </p>
         </div>
         <button onClick={handleCopyName} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', whiteSpace: 'nowrap' }}>
@@ -226,7 +235,7 @@ export default function GroupDetailPage() {
             <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🚪</div>
             <h3 className="font-display" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Sair do grupo?</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Você vai sair de <strong style={{ color: 'var(--text-primary)' }}>"{group.name}"</strong>. Para voltar vai precisar da senha novamente.
+              Você vai sair de <strong style={{ color: 'var(--text-primary)' }}>&quot;{group.name}&quot;</strong>. Para voltar vai precisar da senha novamente.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="btn-outline" onClick={() => setShowConfirmLeave(false)} style={{ flex: 1 }}>Cancelar</button>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase, Player } from '@/lib/supabase'
+import { clearLocalAuthState, getCurrentPlayerSafe, getPlayerForSessionSafe } from '@/lib/auth'
 
 export function Navbar() {
   const [player, setPlayer] = useState<Player | null>(null)
@@ -14,78 +15,50 @@ export function Navbar() {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)
 
+  const closeMenu = () => setMenuOpen(false)
+
   useEffect(() => {
+    let isMounted = true
+
     const checkSession = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      const result = await getCurrentPlayerSafe()
+      if (!isMounted) return
 
-        // Sessão corrompida ou inválida: faz signOut para limpar o localStorage
-        if (sessionError) {
-          console.warn('Sessão inválida detectada, limpando...', sessionError.message)
-          await supabase.auth.signOut()
-          setPlayer(null)
-          return
-        }
-
-        if (session?.user) {
-          const { data, error: playerError } = await supabase
-            .from('players')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-
-          if (playerError) {
-            // Usuário autenticado mas sem perfil — sessão inconsistente
-            console.warn('Perfil não encontrado para sessão ativa, limpando...')
-            await supabase.auth.signOut()
-            setPlayer(null)
-            return
-          }
-
-          if (data) setPlayer(data)
-        }
-      } catch (err) {
-        console.error('Erro inesperado ao verificar sessão:', err)
-        // Em caso de erro total, limpa a sessão para evitar loops
-        try { await supabase.auth.signOut() } catch { /* ignora */ }
+      if (result.error) {
+        console.warn('Sessao invalida detectada, limpando...', result.error.message)
         setPlayer(null)
+        return
       }
+
+      setPlayer(result.data)
     }
 
     checkSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        try {
-          const { data, error } = await supabase
-            .from('players')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
+        const result = await getPlayerForSessionSafe(session)
+        if (!isMounted) return
 
-          if (error || !data) {
-            setPlayer(null)
-          } else {
-            setPlayer(data)
-          }
-        } catch {
+        if (result.error || !result.data) {
           setPlayer(null)
+        } else {
+          setPlayer(result.data)
         }
       } else {
+        if (!isMounted) return
         setPlayer(null)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
-  // Fecha o menu mobile ao navegar
-  useEffect(() => {
-    setMenuOpen(false)
-  }, [pathname])
-
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await clearLocalAuthState()
     setPlayer(null)
     setMenuOpen(false)
     router.push('/')
@@ -94,12 +67,11 @@ export function Navbar() {
   return (
     <nav className="navbar" id="main-navbar">
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+        <Link href="/" onClick={closeMenu} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
           <span className="font-display" style={{ fontSize: '1.6rem', color: 'var(--green)' }}>⚽ Bolão</span>
           <span className="font-display" style={{ fontSize: '1.6rem', color: 'var(--gold)' }}> Copa 2026</span>
         </Link>
 
-        {/* Botão hambúrguer — só mobile */}
         <button
           className="hamburger-btn"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -112,12 +84,11 @@ export function Navbar() {
           <span className={`hamburger-line ${menuOpen ? 'open' : ''}`} />
         </button>
 
-        {/* Links desktop + dropdown mobile */}
         <div className={`nav-links ${menuOpen ? 'nav-open' : ''}`} id="nav-links">
-          <NavLink href="/" active={isActive('/')}>Ranking</NavLink>
-          {player && <NavLink href="/palpites" active={isActive('/palpites')}>Palpites</NavLink>}
-          {player && <NavLink href="/grupos" active={isActive('/grupos')}>Grupos</NavLink>}
-          {player?.is_admin && <NavLink href="/admin" active={isActive('/admin')} gold>Admin</NavLink>}
+          <NavLink href="/" active={isActive('/')} onClick={closeMenu}>Ranking</NavLink>
+          {player && <NavLink href="/palpites" active={isActive('/palpites')} onClick={closeMenu}>Palpites</NavLink>}
+          {player && <NavLink href="/grupos" active={isActive('/grupos')} onClick={closeMenu}>Grupos</NavLink>}
+          {player?.is_admin && <NavLink href="/admin" active={isActive('/admin')} onClick={closeMenu} gold>Admin</NavLink>}
 
           <div className="nav-divider" />
 
@@ -134,6 +105,7 @@ export function Navbar() {
             <div className="nav-auth">
               <Link
                 href="/login"
+                onClick={closeMenu}
                 className="btn-outline"
                 style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -141,6 +113,7 @@ export function Navbar() {
               </Link>
               <Link
                 href="/registro"
+                onClick={closeMenu}
                 className="btn-primary"
                 style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -154,9 +127,9 @@ export function Navbar() {
   )
 }
 
-function NavLink({ href, active, gold, children }: { href: string; active: boolean; gold?: boolean; children: React.ReactNode }) {
+function NavLink({ href, active, gold, onClick, children }: { href: string; active: boolean; gold?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <Link href={href} style={{ textDecoration: 'none' }}>
+    <Link href={href} onClick={onClick} style={{ textDecoration: 'none' }}>
       <span className="font-ui nav-link-item" style={{
         fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
         padding: '0.4rem 0.75rem', borderRadius: '6px', cursor: 'pointer',

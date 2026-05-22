@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
+import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
 import { format, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -21,23 +22,27 @@ export default function PalpitesPage() {
 
     const load = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const sessionResult = await getCurrentSessionSafe()
 
         if (!isMounted) return
 
-        if (sessionError || !session) {
+        if (sessionResult.error || sessionResult.timedOut || !sessionResult.data) {
+          if (sessionResult.error || sessionResult.timedOut) await clearLocalAuthState()
+          setLoading(false)
           router.push('/login')
           return
         }
 
-        const [{ data: playerData, error: playerError }, { data: gamesData, error: gamesError }] = await Promise.all([
-          supabase.from('players').select('*').eq('id', session.user.id).single(),
+        const session = sessionResult.data
+        const [playerResult, { data: gamesData, error: gamesError }] = await Promise.all([
+          getPlayerForSessionSafe(session),
           supabase.from('games').select('*').order('match_date', { ascending: true }),
         ])
 
         if (!isMounted) return
 
-        if (playerError || !playerData) {
+        if (playerResult.error || !playerResult.data) {
+          setLoading(false)
           router.push('/login')
           return
         }
@@ -46,7 +51,7 @@ export default function PalpitesPage() {
           console.error('Erro ao carregar jogos:', gamesError)
         }
 
-        setPlayer(playerData)
+        setPlayer(playerResult.data)
 
         const { data: betsData, error: betsError } = await supabase
           .from('bets')
@@ -79,7 +84,7 @@ export default function PalpitesPage() {
 
     load()
     return () => { isMounted = false }
-  }, [])
+  }, [router])
 
   const isLocked = (game: Game) => isPast(new Date(game.match_date)) || game.is_finished
 

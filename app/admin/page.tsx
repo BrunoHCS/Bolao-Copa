@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, Player, Game } from '@/lib/supabase'
+import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -31,16 +32,24 @@ export default function AdminPage() {
 
     const load = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const sessionResult = await getCurrentSessionSafe()
         if (!isMounted) return
-        if (sessionError || !session) { router.push('/login'); return }
+        if (sessionResult.error || sessionResult.timedOut || !sessionResult.data) {
+          if (sessionResult.error || sessionResult.timedOut) await clearLocalAuthState()
+          setLoading(false)
+          router.push('/login')
+          return
+        }
 
-        const { data: playerData, error: playerError } = await supabase
-          .from('players').select('*').eq('id', session.user.id).single()
+        const playerResult = await getPlayerForSessionSafe(sessionResult.data)
         if (!isMounted) return
-        if (playerError || !playerData?.is_admin) { router.push('/'); return }
+        if (playerResult.error || !playerResult.data?.is_admin) {
+          setLoading(false)
+          router.push('/')
+          return
+        }
 
-        setPlayer(playerData)
+        setPlayer(playerResult.data)
 
         const { data: gamesData, error: gamesError } = await supabase
           .from('games').select('*').order('match_date', { ascending: true })
@@ -68,7 +77,7 @@ export default function AdminPage() {
 
     load()
     return () => { isMounted = false }
-  }, [])
+  }, [router])
 
   const handleSaveResult = async (game: Game) => {
     const r = results[game.id]

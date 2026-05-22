@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 
 export default function Error({
   error,
@@ -33,11 +34,11 @@ export default function Error({
         >
           ↻ Tentar novamente
         </button>
-        <a href="/" style={{ textDecoration: 'none' }}>
-          <button className="btn-outline" style={{ padding: '0.6rem 1.5rem', fontSize: '0.9rem' }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <span className="btn-outline" style={{ padding: '0.6rem 1.5rem', fontSize: '0.9rem', display: 'inline-flex' }}>
             ← Página inicial
-          </button>
-        </a>
+          </span>
+        </Link>
       </div>
       {error.digest && (
         <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'monospace' }}>
