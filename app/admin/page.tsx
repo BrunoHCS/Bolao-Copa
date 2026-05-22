@@ -6,6 +6,8 @@ import { supabase, Player, Game } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+type SaveStatus = 'idle' | 'saving' | 'success' | 'error'
+
 export default function AdminPage() {
   const [player, setPlayer] = useState<Player | null>(null)
   const [games, setGames] = useState<Game[]>([])
@@ -21,7 +23,8 @@ export default function AdminPage() {
   const [gameMsg, setGameMsg] = useState('')
 
   const [results, setResults] = useState<Record<string, { home: string; away: string }>>({})
-  const [savingResult, setSavingResult] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<Record<string, SaveStatus>>({})
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let isMounted = true
@@ -29,34 +32,20 @@ export default function AdminPage() {
     const load = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
         if (!isMounted) return
-
-        if (sessionError || !session) {
-          router.push('/login')
-          return
-        }
+        if (sessionError || !session) { router.push('/login'); return }
 
         const { data: playerData, error: playerError } = await supabase
           .from('players').select('*').eq('id', session.user.id).single()
-
         if (!isMounted) return
-
-        if (playerError || !playerData?.is_admin) {
-          router.push('/')
-          return
-        }
+        if (playerError || !playerData?.is_admin) { router.push('/'); return }
 
         setPlayer(playerData)
 
         const { data: gamesData, error: gamesError } = await supabase
           .from('games').select('*').order('match_date', { ascending: true })
-
         if (!isMounted) return
-
-        if (gamesError) {
-          console.error('Erro ao carregar jogos:', gamesError)
-        }
+        if (gamesError) { console.error('Erro ao carregar jogos:', gamesError); return }
 
         const gamesList = gamesData ?? []
         setGames(gamesList)
@@ -84,25 +73,68 @@ export default function AdminPage() {
   const handleSaveResult = async (game: Game) => {
     const r = results[game.id]
     if (!r || r.home === '' || r.away === '') return
-    setSavingResult(game.id)
+
+    // Limpa estado anterior deste jogo
+    setSaveStatus(prev => ({ ...prev, [game.id]: 'saving' }))
+    setSaveErrors(prev => ({ ...prev, [game.id]: '' }))
+
     try {
       const homeScore = parseInt(r.home)
       const awayScore = parseInt(r.away)
 
-      await supabase.from('games').update({
-        home_score: homeScore,
-        away_score: awayScore,
-        is_finished: true,
-      }).eq('id', game.id)
+      // 1. Atualiza o placar do jogo
+      const { error: updateError } = await supabase
+        .from('games')
+        .update({ home_score: homeScore, away_score: awayScore, is_finished: true })
+        .eq('id', game.id)
 
-      await supabase.rpc('calculate_points', { game_id_param: game.id })
+      if (updateError) {
+        setSaveStatus(prev => ({ ...prev, [game.id]: 'error' }))
+        setSaveErrors(prev => ({
+          ...prev,
+          [game.id]: `Erro ao salvar resultado: ${updateError.message}`,
+        }))
+        return
+      }
 
-      setGames(prev => prev.map(g => g.id === game.id
-        ? { ...g, home_score: homeScore, away_score: awayScore, is_finished: true }
-        : g
+      // 2. Calcula pontos de todos os palpites deste jogo
+      const { error: rpcError } = await supabase.rpc('calculate_points', {
+        game_id_param: game.id,
+      })
+
+      if (rpcError) {
+        // Resultado foi salvo, mas o cálculo falhou — informa separadamente
+        setSaveStatus(prev => ({ ...prev, [game.id]: 'error' }))
+        setSaveErrors(prev => ({
+          ...prev,
+          [game.id]: `Resultado salvo, mas erro ao calcular pontos: ${rpcError.message}`,
+        }))
+        // Ainda atualiza o estado local do jogo (o placar foi salvo)
+        setGames(prev => prev.map(g =>
+          g.id === game.id
+            ? { ...g, home_score: homeScore, away_score: awayScore, is_finished: true }
+            : g
+        ))
+        return
+      }
+
+      // 3. Tudo certo — atualiza estado local
+      setGames(prev => prev.map(g =>
+        g.id === game.id
+          ? { ...g, home_score: homeScore, away_score: awayScore, is_finished: true }
+          : g
       ))
-    } finally {
-      setSavingResult(null)
+
+      setSaveStatus(prev => ({ ...prev, [game.id]: 'success' }))
+      setTimeout(() => setSaveStatus(prev => ({ ...prev, [game.id]: 'idle' })), 3000)
+
+    } catch (err) {
+      console.error('Erro inesperado ao salvar resultado:', err)
+      setSaveStatus(prev => ({ ...prev, [game.id]: 'error' }))
+      setSaveErrors(prev => ({
+        ...prev,
+        [game.id]: 'Erro inesperado. Verifique o console e tente novamente.',
+      }))
     }
   }
 
@@ -154,59 +186,108 @@ export default function AdminPage() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
             Insira o resultado final de cada jogo. Os pontos serão calculados automaticamente.
           </p>
-          {games.map(game => (
-            <div key={game.id} className="card" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '200px' }}>
+          {games.map(game => {
+            const status = saveStatus[game.id] ?? 'idle'
+            const errMsg = saveErrors[game.id] ?? ''
+
+            return (
+              <div key={game.id} className="card" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+
+                  {/* Identificação do jogo */}
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.5rem' }}>{game.home_flag}</span>
+                      <span style={{ fontWeight: 600 }}>{game.home_team}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>vs</span>
+                      <span style={{ fontWeight: 600 }}>{game.away_team}</span>
+                      <span style={{ fontSize: '1.5rem' }}>{game.away_flag}</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontFamily: 'Barlow Condensed', letterSpacing: '0.05em' }}>
+                      {format(new Date(game.match_date), "d MMM 'às' HH:mm", { locale: ptBR })} · {game.stage}
+                    </div>
+                  </div>
+
+                  {/* Inputs de placar */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{game.home_flag}</span>
-                    <span style={{ fontWeight: 600 }}>{game.home_team}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>vs</span>
-                    <span style={{ fontWeight: 600 }}>{game.away_team}</span>
-                    <span style={{ fontSize: '1.5rem' }}>{game.away_flag}</span>
+                    <input
+                      className="input-score"
+                      style={{ width: '3.5rem', fontSize: '1.5rem' }}
+                      type="number" min="0" max="99"
+                      value={results[game.id]?.home ?? ''}
+                      onChange={e => setResults(prev => ({
+                        ...prev,
+                        [game.id]: { ...prev[game.id], home: e.target.value.replace(/\D/g, '').slice(0, 2) },
+                      }))}
+                      placeholder="–"
+                    />
+                    <span className="font-display" style={{ color: 'var(--text-muted)' }}>×</span>
+                    <input
+                      className="input-score"
+                      style={{ width: '3.5rem', fontSize: '1.5rem' }}
+                      type="number" min="0" max="99"
+                      value={results[game.id]?.away ?? ''}
+                      onChange={e => setResults(prev => ({
+                        ...prev,
+                        [game.id]: { ...prev[game.id], away: e.target.value.replace(/\D/g, '').slice(0, 2) },
+                      }))}
+                      placeholder="–"
+                    />
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontFamily: 'Barlow Condensed', letterSpacing: '0.05em' }}>
-                    {format(new Date(game.match_date), "d MMM 'às' HH:mm", { locale: ptBR })} · {game.stage}
+
+                  {/* Status + botão */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {status === 'success' && (
+                      <span className="badge badge-green">✓ Pontos calculados!</span>
+                    )}
+                    {status !== 'success' && game.is_finished && (
+                      <span className="badge badge-green">✓ Finalizado</span>
+                    )}
+                    {status !== 'success' && !game.is_finished && (
+                      <span className="badge badge-muted">Pendente</span>
+                    )}
+
+                    <button
+                      className="btn-gold"
+                      style={{ padding: '0.45rem 1rem', fontSize: '0.82rem' }}
+                      onClick={() => handleSaveResult(game)}
+                      disabled={
+                        status === 'saving' ||
+                        !results[game.id]?.home ||
+                        !results[game.id]?.away
+                      }
+                    >
+                      {status === 'saving'
+                        ? '⏳ Salvando...'
+                        : game.is_finished
+                          ? '↻ Atualizar'
+                          : '✓ Confirmar'
+                      }
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input
-                    className="input-score"
-                    style={{ width: '3.5rem', fontSize: '1.5rem' }}
-                    type="number" min="0" max="99"
-                    value={results[game.id]?.home ?? ''}
-                    onChange={e => setResults(prev => ({ ...prev, [game.id]: { ...prev[game.id], home: e.target.value.replace(/\D/g, '').slice(0, 2) } }))}
-                    placeholder="–"
-                  />
-                  <span className="font-display" style={{ color: 'var(--text-muted)' }}>×</span>
-                  <input
-                    className="input-score"
-                    style={{ width: '3.5rem', fontSize: '1.5rem' }}
-                    type="number" min="0" max="99"
-                    value={results[game.id]?.away ?? ''}
-                    onChange={e => setResults(prev => ({ ...prev, [game.id]: { ...prev[game.id], away: e.target.value.replace(/\D/g, '').slice(0, 2) } }))}
-                    placeholder="–"
-                  />
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {game.is_finished
-                    ? <span className="badge badge-green">✓ Finalizado</span>
-                    : <span className="badge badge-muted">Pendente</span>
-                  }
-                  <button
-                    className="btn-gold"
-                    style={{ padding: '0.45rem 1rem', fontSize: '0.82rem' }}
-                    onClick={() => handleSaveResult(game)}
-                    disabled={savingResult === game.id || !results[game.id]?.home || !results[game.id]?.away}
-                  >
-                    {savingResult === game.id ? 'Salvando...' : game.is_finished ? '↻ Atualizar' : '✓ Confirmar'}
-                  </button>
-                </div>
+                {/* Mensagem de erro por jogo */}
+                {status === 'error' && errMsg && (
+                  <div style={{
+                    marginTop: '0.75rem',
+                    background: 'rgba(255,71,87,0.1)',
+                    border: '1px solid rgba(255,71,87,0.3)',
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.9rem',
+                    color: 'var(--red)',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ flexShrink: 0 }}>⚠️</span>
+                    <span>{errMsg}</span>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -218,8 +299,8 @@ export default function AdminPage() {
           <div className="card" style={{ padding: '1.75rem' }}>
             <form onSubmit={handleAddGame} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <FormField label="Time da casa" value={newGame.home_team} onChange={v => setNewGame(p => ({ ...p, home_team: v }))} placeholder="Brasil" />
-                <FormField label="Time visitante" value={newGame.away_team} onChange={v => setNewGame(p => ({ ...p, away_team: v }))} placeholder="Argentina" />
+                <FormField label="Time da casa"        value={newGame.home_team}  onChange={v => setNewGame(p => ({ ...p, home_team: v }))}  placeholder="Brasil" />
+                <FormField label="Time visitante"      value={newGame.away_team}  onChange={v => setNewGame(p => ({ ...p, away_team: v }))}  placeholder="Argentina" />
                 <FormField label="Bandeira (emoji) casa" value={newGame.home_flag} onChange={v => setNewGame(p => ({ ...p, home_flag: v }))} placeholder="🇧🇷" />
                 <FormField label="Bandeira (emoji) fora" value={newGame.away_flag} onChange={v => setNewGame(p => ({ ...p, away_flag: v }))} placeholder="🇦🇷" />
               </div>
@@ -234,7 +315,13 @@ export default function AdminPage() {
               </div>
 
               {gameMsg && (
-                <div style={{ padding: '0.75rem 1rem', borderRadius: '8px', background: gameMsg.startsWith('✅') ? 'rgba(0,214,79,0.1)' : 'rgba(255,71,87,0.1)', border: `1px solid ${gameMsg.startsWith('✅') ? 'rgba(0,214,79,0.3)' : 'rgba(255,71,87,0.3)'}`, color: gameMsg.startsWith('✅') ? 'var(--green)' : 'var(--red)', fontSize: '0.9rem' }}>
+                <div style={{
+                  padding: '0.75rem 1rem', borderRadius: '8px',
+                  background: gameMsg.startsWith('✅') ? 'rgba(0,214,79,0.1)' : 'rgba(255,71,87,0.1)',
+                  border: `1px solid ${gameMsg.startsWith('✅') ? 'rgba(0,214,79,0.3)' : 'rgba(255,71,87,0.3)'}`,
+                  color: gameMsg.startsWith('✅') ? 'var(--green)' : 'var(--red)',
+                  fontSize: '0.9rem',
+                }}>
                   {gameMsg}
                 </div>
               )}
@@ -266,7 +353,9 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   )
 }
 
-function FormField({ label, value, onChange, placeholder, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+function FormField({ label, value, onChange, placeholder, type = 'text' }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string
+}) {
   return (
     <div>
       <label className="font-ui" style={{ fontSize: '0.8rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem' }}>
