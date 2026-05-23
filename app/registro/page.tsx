@@ -47,6 +47,12 @@ export default function RegisterPage() {
         return
       }
 
+      const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
+      if (loginErr) {
+        router.push('/login')
+        return
+      }
+
       const { error: profileErr } = await supabase.from('players').upsert({
         id: authData.user.id,
         username: cleanUsername,
@@ -59,12 +65,6 @@ export default function RegisterPage() {
         setError(profileErr.code === '23505'
           ? 'Este nome de usuário já está em uso.'
           : 'Erro ao criar perfil: ' + profileErr.message)
-        return
-      }
-
-      const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginErr) {
-        router.push('/login')
         return
       }
 
