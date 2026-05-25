@@ -1,22 +1,16 @@
 -- ===================================================
--- BOLAO COPA 2026 - Correcoes de Seguranca e Integridade
--- Execute este arquivo no SQL Editor do Supabase
+-- BOLAO COPA 2026 - Fix registration profile creation
+-- Execute this file in the Supabase SQL Editor.
 -- ===================================================
 
--- -----------------------------------------------
--- 1. FK CASCADE: players -> auth.users
---    Quando um usuario for deletado no painel do
---    Supabase, o registro em public.players e
---    apagado automaticamente.
--- -----------------------------------------------
-
-ALTER TABLE public.players
-  DROP CONSTRAINT IF EXISTS players_id_fkey;
-
+-- 1. Ensure players are tied to Supabase Auth users.
 DELETE FROM public.players p
 WHERE NOT EXISTS (
   SELECT 1 FROM auth.users u WHERE u.id = p.id
 );
+
+ALTER TABLE public.players
+  DROP CONSTRAINT IF EXISTS players_id_fkey;
 
 ALTER TABLE public.players
   ADD CONSTRAINT players_id_fkey
@@ -24,11 +18,7 @@ ALTER TABLE public.players
   REFERENCES auth.users(id)
   ON DELETE CASCADE;
 
--- -----------------------------------------------
--- 2. Corrigir RLS: policy de INSERT em players
---    A nova exige que auth.uid() == id do player.
--- -----------------------------------------------
-
+-- 2. Keep direct client inserts safe. New signups are handled by the trigger.
 DROP POLICY IF EXISTS "Qualquer autenticado pode criar player" ON public.players;
 DROP POLICY IF EXISTS "Usuario cria seu proprio player" ON public.players;
 DROP POLICY IF EXISTS "Usuário cria seu próprio player" ON public.players;
@@ -38,12 +28,7 @@ CREATE POLICY "Usuario cria seu proprio player"
   FOR INSERT
   WITH CHECK (auth.uid() = id);
 
--- -----------------------------------------------
--- 3. Criar perfil automaticamente no cadastro
---    Evita erro de RLS quando o client ainda nao
---    recebeu a sessao logo apos auth.signUp().
--- -----------------------------------------------
-
+-- 3. Create player profiles from auth metadata, bypassing RLS safely.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -79,10 +64,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- -----------------------------------------------
--- 4. Backfill de usuarios ja criados sem player
--- -----------------------------------------------
-
+-- 4. Backfill auth users that were created before the trigger existed.
 INSERT INTO public.players (id, username, display_name, is_admin, total_points)
 SELECT
   u.id,

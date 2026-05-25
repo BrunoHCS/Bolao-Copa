@@ -24,9 +24,19 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const cleanUsername = username.toLowerCase().trim()
+      const cleanDisplayName = displayName.trim()
       const email = `${cleanUsername}@bolao2026.app`
 
-      const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password })
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: cleanUsername,
+            display_name: cleanDisplayName,
+          },
+        },
+      })
 
       if (authErr) {
         const msg = authErr.message ?? ''
@@ -50,21 +60,6 @@ export default function RegisterPage() {
       const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
       if (loginErr) {
         router.push('/login')
-        return
-      }
-
-      const { error: profileErr } = await supabase.from('players').upsert({
-        id: authData.user.id,
-        username: cleanUsername,
-        display_name: displayName.trim(),
-        is_admin: false,
-        total_points: 0,
-      }, { onConflict: 'id' })
-
-      if (profileErr) {
-        setError(profileErr.code === '23505'
-          ? 'Este nome de usuário já está em uso.'
-          : 'Erro ao criar perfil: ' + profileErr.message)
         return
       }
 
