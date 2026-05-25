@@ -87,10 +87,6 @@ export default function HomePage() {
             <div className="font-display" style={{ fontSize: '2rem', color: 'var(--gold)' }}>{games.length}</div>
             <div className="font-ui" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Jogos</div>
           </div>
-          <div style={{ textAlign: 'center', padding: '0.75rem 1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}>
-            <div className="font-display" style={{ fontSize: '2rem', color: 'var(--text-primary)' }}>{bets.length}</div>
-            <div className="font-ui" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Palpites</div>
-          </div>
         </div>
       </div>
 
