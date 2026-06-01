@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
-import { withTimeout } from '@/lib/auth'
+import { getCurrentPlayerSafe, withTimeout } from '@/lib/auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -11,6 +11,7 @@ const MEDALS = ['🥇', '🥈', '🥉']
 
 export default function HomePage() {
   const [players, setPlayers] = useState<Player[]>([])
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [games, setGames] = useState<Game[]>([])
   const [bets, setBets] = useState<Bet[]>([])
   const [loading, setLoading] = useState(true)
@@ -23,6 +24,7 @@ export default function HomePage() {
           supabase.from('players').select('*').order('total_points', { ascending: false }),
           supabase.from('games').select('*').order('match_date', { ascending: true }),
           supabase.from('bets').select('*'),
+          getCurrentPlayerSafe(),
         ]))
 
         if (result.error || !result.data) {
@@ -31,13 +33,19 @@ export default function HomePage() {
           return
         }
 
-        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, { data: bs, error: e3 }] = result.data
+        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, { data: bs, error: e3 }, playerResult] = result.data
         if (e1 || e2 || e3) {
           console.error('Erro ao carregar dados:', e1 ?? e2 ?? e3)
           setError(true)
           return
         }
+
+        if (playerResult.error) {
+          console.warn('Nao foi possivel identificar o usuario logado:', playerResult.error.message)
+        }
+
         setPlayers(ps ?? [])
+        setCurrentPlayer(playerResult.data ?? null)
         setGames(gs ?? [])
         setBets(bs ?? [])
       } catch (err) {
@@ -51,6 +59,10 @@ export default function HomePage() {
   }, [])
 
   const upcomingGames = games.filter(g => !g.is_finished).slice(0, 4)
+  const topPlayers = players.slice(0, 5)
+  const currentPlayerIndex = players.findIndex(p => p.id === currentPlayer?.id)
+  const currentPlayerRankingEntry = currentPlayerIndex >= 5 ? players[currentPlayerIndex] : null
+  const rankingRows = currentPlayerRankingEntry ? [...topPlayers, currentPlayerRankingEntry] : topPlayers
 
   if (loading) return <LoadingScreen />
 
@@ -110,29 +122,54 @@ export default function HomePage() {
                 </Link>
               </div>
             ) : (
-              players.map((p, i) => (
-                <div key={p.id} className="rank-row" style={{
-                  background: i === 0 ? 'rgba(245,197,24,0.04)' : undefined,
-                  borderLeft: i === 0 ? '3px solid var(--gold)' : i === 1 ? '3px solid #c0c0c0' : i === 2 ? '3px solid #cd7f32' : '3px solid transparent',
-                }}>
-                  <div style={{ textAlign: 'center' }}>
-                    {i < 3
-                      ? <span style={{ fontSize: '1.4rem' }}>{MEDALS[i]}</span>
-                      : <span className="font-display" style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>{i + 1}</span>
-                    }
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.display_name}</div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'Barlow Condensed', letterSpacing: '0.05em' }}>
-                      @{p.username}
+              rankingRows.map((p, i) => {
+                const isCurrentPlayerExtraRow = currentPlayerRankingEntry !== null && p.id === currentPlayerRankingEntry.id
+                const rank = isCurrentPlayerExtraRow ? currentPlayerIndex + 1 : i + 1
+                const isCurrentPlayer = p.id === currentPlayer?.id
+
+                return (
+                  <div key={p.id}>
+                    {isCurrentPlayerExtraRow && (
+                      <div className="font-ui" style={{ padding: '0.5rem 1.25rem', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
+                        ...
+                      </div>
+                    )}
+                    <div className="rank-row" style={{
+                      background: isCurrentPlayer
+                        ? 'rgba(0,214,79,0.04)'
+                        : rank === 1 ? 'rgba(245,197,24,0.04)' : undefined,
+                      borderLeft: isCurrentPlayer
+                        ? '3px solid rgba(0,214,79,0.5)'
+                        : rank === 1 ? '3px solid var(--gold)'
+                          : rank === 2 ? '3px solid #c0c0c0'
+                            : rank === 3 ? '3px solid #cd7f32'
+                              : '3px solid transparent',
+                    }}>
+                      <div style={{ textAlign: 'center' }}>
+                        {rank <= 3
+                          ? <span style={{ fontSize: '1.4rem' }}>{MEDALS[rank - 1]}</span>
+                          : <span className="font-display" style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>{rank}</span>
+                        }
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.display_name}</span>
+                          {isCurrentPlayer && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--green)', fontFamily: 'Barlow Condensed', letterSpacing: '0.06em', textTransform: 'uppercase' }}>vocÃª</span>
+                          )}
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'Barlow Condensed', letterSpacing: '0.05em' }}>
+                          @{p.username}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div className="font-display" style={{ fontSize: '1.6rem', color: rank === 1 ? 'var(--gold)' : 'var(--green)' }}>{p.total_points}</div>
+                        <div className="font-ui" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>pts</div>
+                      </div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div className="font-display" style={{ fontSize: '1.6rem', color: i === 0 ? 'var(--gold)' : 'var(--green)' }}>{p.total_points}</div>
-                    <div className="font-ui" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>pts</div>
-                  </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
