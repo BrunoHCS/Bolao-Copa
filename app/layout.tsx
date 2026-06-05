@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { AuthProvider } from '@/components/AuthProvider'
 import { Navbar } from '@/components/Navbar'
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1212849269478012"
       />
       <body>
+        <AuthProvider>
         <Navbar />
         <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 1.25rem' }}>
           {children}
@@ -28,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             ⚽ BOLÃO COPA 2026 — Boa sorte a todos! 🏆
           </span>
         </footer>
+        </AuthProvider>
       </body>
     </html>
   )

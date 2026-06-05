@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
-import { getCurrentPlayerSafe, withTimeout } from '@/lib/auth'
+import { withTimeout } from '@/lib/auth'
+import { useAuth } from '@/components/AuthProvider'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -12,8 +13,8 @@ type BetSummary = Pick<Bet, 'id' | 'game_id' | 'points'>
 const MEDALS = ['🥇', '🥈', '🥉']
 
 export default function HomePage() {
+  const { player: currentPlayer } = useAuth()
   const [players, setPlayers] = useState<Player[]>([])
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [games, setGames] = useState<Game[]>([])
   const [bets, setBets] = useState<BetSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,7 +26,6 @@ export default function HomePage() {
         const result = await withTimeout(Promise.all([
           supabase.from('players').select('*').order('total_points', { ascending: false }),
           supabase.from('games').select('*').order('match_date', { ascending: true }),
-          getCurrentPlayerSafe(),
         ]))
 
         if (result.error || !result.data) {
@@ -34,15 +34,11 @@ export default function HomePage() {
           return
         }
 
-        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, playerResult] = result.data
+        const [{ data: ps, error: e1 }, { data: gs, error: e2 }] = result.data
         if (e1 || e2) {
           console.error('Erro ao carregar dados:', e1 ?? e2)
           setError(true)
           return
-        }
-
-        if (playerResult.error) {
-          console.warn('Nao foi possivel identificar o usuario logado:', playerResult.error.message)
         }
 
         const finishedGameIds = (gs ?? []).filter(game => game.is_finished).map(game => game.id)
@@ -64,7 +60,6 @@ export default function HomePage() {
         }
 
         setPlayers(ps ?? [])
-        setCurrentPlayer(playerResult.data ?? null)
         setGames(gs ?? [])
         setBets(betSummaries)
       } catch (err) {

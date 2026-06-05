@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { supabase, Player } from '@/lib/supabase'
-import { clearLocalAuthState, getCurrentPlayerSafe, getPlayerForSessionSafe } from '@/lib/auth'
+import { useAuth } from '@/components/AuthProvider'
 
 export function Navbar() {
-  const [player, setPlayer] = useState<Player | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const { player, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -17,49 +16,8 @@ export function Navbar() {
 
   const closeMenu = () => setMenuOpen(false)
 
-  useEffect(() => {
-    let isMounted = true
-
-    const checkSession = async () => {
-      const result = await getCurrentPlayerSafe()
-      if (!isMounted) return
-
-      if (result.error) {
-        console.warn('Sessao invalida detectada, limpando...', result.error.message)
-        setPlayer(null)
-        return
-      }
-
-      setPlayer(result.data)
-    }
-
-    checkSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const result = await getPlayerForSessionSafe(session)
-        if (!isMounted) return
-
-        if (result.error || !result.data) {
-          setPlayer(null)
-        } else {
-          setPlayer(result.data)
-        }
-      } else {
-        if (!isMounted) return
-        setPlayer(null)
-      }
-    })
-
-    return () => {
-      isMounted = false
-      subscription.unsubscribe()
-    }
-  }, [])
-
   const handleLogout = async () => {
-    await clearLocalAuthState()
-    setPlayer(null)
+    await signOut()
     setMenuOpen(false)
     router.push('/')
   }
