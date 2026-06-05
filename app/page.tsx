@@ -169,7 +169,7 @@ export default function HomePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.display_name}</span>
                           {isCurrentPlayer && (
-                            <span style={{ fontSize: '0.7rem', color: 'var(--green)', fontFamily: 'Barlow Condensed', letterSpacing: '0.06em', textTransform: 'uppercase' }}>vocÃª</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--green)', fontFamily: 'Barlow Condensed', letterSpacing: '0.06em', textTransform: 'uppercase' }}>você</span>
                           )}
                         </div>
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'Barlow Condensed', letterSpacing: '0.05em' }}>
