@@ -7,13 +7,15 @@ import { getCurrentPlayerSafe, withTimeout } from '@/lib/auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+type BetSummary = Pick<Bet, 'id' | 'game_id' | 'points'>
+
 const MEDALS = ['🥇', '🥈', '🥉']
 
 export default function HomePage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [games, setGames] = useState<Game[]>([])
-  const [bets, setBets] = useState<Bet[]>([])
+  const [bets, setBets] = useState<BetSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -23,7 +25,6 @@ export default function HomePage() {
         const result = await withTimeout(Promise.all([
           supabase.from('players').select('*').order('total_points', { ascending: false }),
           supabase.from('games').select('*').order('match_date', { ascending: true }),
-          supabase.from('bets').select('*'),
           getCurrentPlayerSafe(),
         ]))
 
@@ -33,9 +34,9 @@ export default function HomePage() {
           return
         }
 
-        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, { data: bs, error: e3 }, playerResult] = result.data
-        if (e1 || e2 || e3) {
-          console.error('Erro ao carregar dados:', e1 ?? e2 ?? e3)
+        const [{ data: ps, error: e1 }, { data: gs, error: e2 }, playerResult] = result.data
+        if (e1 || e2) {
+          console.error('Erro ao carregar dados:', e1 ?? e2)
           setError(true)
           return
         }
@@ -44,10 +45,28 @@ export default function HomePage() {
           console.warn('Nao foi possivel identificar o usuario logado:', playerResult.error.message)
         }
 
+        const finishedGameIds = (gs ?? []).filter(game => game.is_finished).map(game => game.id)
+        let betSummaries: BetSummary[] = []
+
+        if (finishedGameIds.length > 0) {
+          const betsResult = await withTimeout(
+            supabase
+              .from('bets')
+              .select('id, game_id, points')
+              .in('game_id', finishedGameIds),
+          )
+
+          if (betsResult.error || betsResult.data?.error) {
+            console.warn('Nao foi possivel carregar resumo dos palpites:', betsResult.error ?? betsResult.data?.error)
+          } else {
+            betSummaries = betsResult.data?.data ?? []
+          }
+        }
+
         setPlayers(ps ?? [])
         setCurrentPlayer(playerResult.data ?? null)
         setGames(gs ?? [])
-        setBets(bs ?? [])
+        setBets(betSummaries)
       } catch (err) {
         console.error('Erro inesperado ao carregar dados:', err)
         setError(true)
@@ -241,7 +260,7 @@ function TeamDisplay({ flag, name, align }: { flag: string; name: string; align:
   )
 }
 
-function FinishedGames({ games, bets }: { games: Game[]; bets: Bet[] }) {
+function FinishedGames({ games, bets }: { games: Game[]; bets: BetSummary[] }) {
   const finished = games.filter(g => g.is_finished)
   if (finished.length === 0) return null
 
