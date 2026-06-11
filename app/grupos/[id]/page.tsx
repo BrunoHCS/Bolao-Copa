@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Player, Group, Game, Bet } from '@/lib/supabase'
 import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
-import { format, isPast } from 'date-fns'
+import { format, isPast, subHours } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 type MemberWithPoints = Player & { joined_at: string }
@@ -91,7 +91,7 @@ export default function GroupDetailPage() {
 
         // Palpites de todos os membros — apenas jogos com horário passado
         const lockedGameIds = (gamesData ?? [])
-          .filter(g => isPast(new Date(g.match_date)) || g.is_finished)
+          .filter(g => isPast(subHours(new Date(g.match_date), 3)) || g.is_finished)
           .map(g => g.id)
 
         if (lockedGameIds.length > 0) {
@@ -147,7 +147,7 @@ export default function GroupDetailPage() {
   if (!group) return null
 
   const isOwner = currentPlayer?.id === group.owner_id
-  const lockedGames = games.filter(g => isPast(new Date(g.match_date)) || g.is_finished)
+  const lockedGames = games.filter(g => isPast(subHours(new Date(g.match_date), 3)) || g.is_finished)
   const totalLockedWithBets = lockedGames.filter(g => Object.keys(betsMatrix[g.id] ?? {}).length > 0).length
 
   return (

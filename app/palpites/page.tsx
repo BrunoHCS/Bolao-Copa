@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, Player, Game, Bet } from '@/lib/supabase'
 import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
-import { format, isPast } from 'date-fns'
+import { format, isPast, subHours } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 export default function PalpitesPage() {
@@ -86,7 +86,7 @@ export default function PalpitesPage() {
     return () => { isMounted = false }
   }, [router])
 
-  const isLocked = (game: Game) => isPast(new Date(game.match_date)) || game.is_finished
+  const isLocked = (game: Game) => isPast(subHours(new Date(game.match_date), 3)) || game.is_finished
 
   const handleDraftChange = (gameId: string, side: 'home' | 'away', value: string) => {
     const num = value.replace(/\D/g, '').slice(0, 2)
