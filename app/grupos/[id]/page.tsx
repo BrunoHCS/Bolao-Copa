@@ -91,7 +91,7 @@ export default function GroupDetailPage() {
 
         // Palpites de todos os membros — apenas jogos com horário passado
         const lockedGameIds = (gamesData ?? [])
-          .filter(g => isPast(subHours(new Date(g.match_date), 3)) || g.is_finished)
+          .filter(g => isPast(subHours(new Date(g.match_date), 2)) || g.is_finished)
           .map(g => g.id)
 
         if (lockedGameIds.length > 0) {
@@ -147,7 +147,7 @@ export default function GroupDetailPage() {
   if (!group) return null
 
   const isOwner = currentPlayer?.id === group.owner_id
-  const lockedGames = games.filter(g => isPast(subHours(new Date(g.match_date), 3)) || g.is_finished)
+  const lockedGames = games.filter(g => isPast(subHours(new Date(g.match_date), 2)) || g.is_finished)
   const totalLockedWithBets = lockedGames.filter(g => Object.keys(betsMatrix[g.id] ?? {}).length > 0).length
 
   return (

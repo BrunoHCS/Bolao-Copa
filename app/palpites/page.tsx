@@ -86,7 +86,7 @@ export default function PalpitesPage() {
     return () => { isMounted = false }
   }, [router])
 
-  const isLocked = (game: Game) => isPast(subHours(new Date(game.match_date), 3)) || game.is_finished
+  const isLocked = (game: Game) => isPast(subHours(new Date(game.match_date), 2)) || game.is_finished
 
   const handleDraftChange = (gameId: string, side: 'home' | 'away', value: string) => {
     const num = value.replace(/\D/g, '').slice(0, 2)
