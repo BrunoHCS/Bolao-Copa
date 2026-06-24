@@ -41,7 +41,8 @@ export default function HomePage() {
           return
         }
 
-        const finishedGameIds = (gs ?? []).filter(game => game.is_finished).map(game => game.id)
+        const visibleGames = (gs ?? []).filter(game => game.is_published !== false)
+        const finishedGameIds = visibleGames.filter(game => game.is_finished).map(game => game.id)
         let betSummaries: BetSummary[] = []
 
         if (finishedGameIds.length > 0) {
@@ -60,7 +61,7 @@ export default function HomePage() {
         }
 
         setPlayers(ps ?? [])
-        setGames(gs ?? [])
+        setGames(visibleGames)
         setBets(betSummaries)
       } catch (err) {
         console.error('Erro inesperado ao carregar dados:', err)

@@ -22,6 +22,15 @@ export type Game = {
   away_flag: string
   match_date: string
   stage: string
+  match_number?: number | null
+  stage_order?: number | null
+  home_team_id?: string | null
+  away_team_id?: string | null
+  home_slot?: string | null
+  away_slot?: string | null
+  winner_team_id?: string | null
+  loser_team_id?: string | null
+  is_published?: boolean | null
   home_score: number | null
   away_score: number | null
   is_finished: boolean
@@ -48,4 +57,36 @@ export type GroupMember = {
   group_id: string
   player_id: string
   joined_at: string
+}
+
+export type WorldCupTeam = {
+  id: string
+  name: string
+  flag: string
+  group_code: string
+  group_seed: number
+}
+
+export type GroupStanding = {
+  team_id: string
+  team_name: string
+  flag: string
+  group_code: string
+  played: number
+  wins: number
+  draws: number
+  losses: number
+  goals_for: number
+  goals_against: number
+  goal_difference: number
+  points: number
+  fair_play_points: number | null
+  manual_tiebreak_order: number | null
+  group_position: number
+  qualified_status: string
+}
+
+export type BestThird = Omit<GroupStanding, 'fair_play_points' | 'manual_tiebreak_order' | 'group_position' | 'qualified_status'> & {
+  third_rank: number
+  qualified: boolean
 }

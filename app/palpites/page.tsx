@@ -71,7 +71,7 @@ export default function PalpitesPage() {
           draftsInit[b.game_id] = { home: String(b.home_score), away: String(b.away_score) }
         }
 
-        setGames(gamesData ?? [])
+        setGames((gamesData ?? []).filter(game => game.is_published !== false))
         setBets(betsMap)
         setDrafts(draftsInit)
       } catch (err) {

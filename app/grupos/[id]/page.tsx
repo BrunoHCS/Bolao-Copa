@@ -87,10 +87,11 @@ export default function GroupDetailPage() {
           .from('games').select('*').order('match_date', { ascending: true })
         if (!isMounted) return
         if (gamesErr) { console.error('Erro ao carregar jogos:', gamesErr); return }
-        setGames(gamesData ?? [])
+        const visibleGames = (gamesData ?? []).filter(game => game.is_published !== false)
+        setGames(visibleGames)
 
         // Palpites de todos os membros — apenas jogos com horário passado
-        const lockedGameIds = (gamesData ?? [])
+        const lockedGameIds = visibleGames
           .filter(g => isPast(new Date(g.match_date)) || g.is_finished)
           .map(g => g.id)
 
