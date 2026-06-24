@@ -6,6 +6,7 @@ import { supabase, Player, Game, Bet } from '@/lib/supabase'
 import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
 import { format, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { ExpandableSection } from '@/components/ExpandableSection'
 
 export default function PalpitesPage() {
   const [player, setPlayer] = useState<Player | null>(null)
@@ -177,7 +178,9 @@ export default function PalpitesPage() {
           <SectionTitle>✅ Jogos Finalizados</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {finishedGames.map(game => (
-              <FinishedCard key={game.id} game={game} bet={bets[game.id]} />
+              <ExpandableSection key={game.id} title={`${game.home_team} vs ${game.away_team}`}>
+                <FinishedCard game={game} bet={bets[game.id]} />
+              </ExpandableSection>
             ))}
           </div>
         </div>

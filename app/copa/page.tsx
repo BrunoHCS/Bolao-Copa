@@ -73,7 +73,7 @@ export default function CopaPage() {
       )}
 
       <section>
-        <SectionTitle title="Grupos" />
+        <SectionTitle title="Fase de Grupos" />
         <div className="card" style={{ padding: '0 1.25rem' }}>
           {GROUPS.map((group, index) => {
             const groupStandings = standings.filter(row => row.group_code === group)

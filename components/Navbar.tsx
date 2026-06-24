@@ -46,6 +46,7 @@ export function Navbar() {
           <NavLink href="/" active={isActive('/')} onClick={closeMenu}>Ranking</NavLink>
           {player && <NavLink href="/palpites" active={isActive('/palpites')} onClick={closeMenu}>Palpites</NavLink>}
           {player && <NavLink href="/grupos" active={isActive('/grupos')} onClick={closeMenu}>Grupos</NavLink>}
+          {player && <NavLink href="/copa" active={isActive('/copa')} onClick={closeMenu}>Copa</NavLink>}
           {player?.is_admin && <NavLink href="/admin" active={isActive('/admin')} onClick={closeMenu} gold>Admin</NavLink>}
 
           <div className="nav-divider" />
