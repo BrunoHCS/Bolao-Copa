@@ -174,16 +174,19 @@ export default function PalpitesPage() {
 
       {/* Jogos finalizados */}
       {finishedGames.length > 0 && (
-        <div>
-          <SectionTitle>✅ Jogos Finalizados</SectionTitle>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <ExpandableSection
+          title="✅ Jogos Finalizados"
+          count={finishedGames.length}
+          subtitle="Mostre ou esconda os resultados já encerrados"
+          defaultOpen={false}
+          mobileDefaultOpen={false}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
             {finishedGames.map(game => (
-              <ExpandableSection key={game.id} title={`${game.home_team} vs ${game.away_team}`}>
-                <FinishedCard game={game} bet={bets[game.id]} />
-              </ExpandableSection>
+              <FinishedCard key={game.id} game={game} bet={bets[game.id]} />
             ))}
           </div>
-        </div>
+        </ExpandableSection>
       )}
     </div>
   )
