@@ -177,7 +177,6 @@ export default function PalpitesPage() {
         <ExpandableSection
           title="✅ Jogos Finalizados"
           count={finishedGames.length}
-          subtitle="Mostre ou esconda os resultados já encerrados"
           defaultOpen={false}
           mobileDefaultOpen={false}
         >

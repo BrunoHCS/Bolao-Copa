@@ -7,6 +7,7 @@ import { supabase, Player, Group, Game, Bet } from '@/lib/supabase'
 import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
 import { format, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { ExpandableSection } from '@/components/ExpandableSection'
 
 type MemberWithPoints = Player & { joined_at: string }
 type Tab = 'ranking' | 'palpites'
@@ -359,9 +360,13 @@ function PalpitesTab({ members, games, betsMatrix, currentPlayerId }: {
 
       {/* Jogos finalizados */}
       {finishedGames.length > 0 && (
-        <section>
-          <SectionLabel icon="✅" label="Jogos Finalizados" count={finishedGames.length} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <ExpandableSection
+          title="✅ Jogos Finalizados"
+          count={finishedGames.length}
+          defaultOpen={false}
+          mobileDefaultOpen={false}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
             {finishedGames.map(game => (
               <BetsGameCard
                 key={game.id}
@@ -374,7 +379,7 @@ function PalpitesTab({ members, games, betsMatrix, currentPlayerId }: {
               />
             ))}
           </div>
-        </section>
+        </ExpandableSection>
       )}
 
       {/* Jogos travados, aguardando resultado */}
