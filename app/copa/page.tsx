@@ -145,10 +145,10 @@ function StandingsTable({ rows }: { rows: GroupStanding[] }) {
           <tr style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', textAlign: 'left' }}>
             <th style={{ padding: '0.35rem 0.5rem 0.5rem 0' }}>#</th>
             <th>Seleção</th>
-            <th>J</th>
             <th>Pts</th>
             <th>SG</th>
             <th>GP</th>
+            <th>J</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -159,10 +159,10 @@ function StandingsTable({ rows }: { rows: GroupStanding[] }) {
                 {row.group_position}
               </td>
               <td style={{ fontWeight: 700 }}>{row.flag} {row.team_name}</td>
-              <td>{row.played}</td>
               <td>{row.points}</td>
               <td>{row.goal_difference}</td>
               <td>{row.goals_for}</td>
+              <td>{row.played}</td>
               <td><span className={row.group_position <= 2 ? 'badge badge-green' : row.group_position === 3 ? 'badge badge-gold' : 'badge badge-muted'}>{row.qualified_status}</span></td>
             </tr>
           ))}

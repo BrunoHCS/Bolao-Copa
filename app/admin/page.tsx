@@ -356,7 +356,6 @@ function ResultsTab({ games, results, saveStatus, saveErrors, onResultChange, on
         <ExpandableSection
           title="✅ Jogos Finalizados"
           count={finishedGames.length}
-          subtitle="Mostre ou esconda os resultados já encerrados"
           defaultOpen={false}
           mobileDefaultOpen={false}
         >
@@ -503,7 +502,6 @@ function KnockoutTab({ games, standings, bestThirds, error, message, generating,
       <ExpandableSection
         title="Classificação dos grupos"
         count={groups.length}
-        subtitle="Mostre ou esconda a tabela de classificação"
         defaultOpen={false}
         mobileDefaultOpen={false}
       >
@@ -531,7 +529,6 @@ function KnockoutTab({ games, standings, bestThirds, error, message, generating,
       <ExpandableSection
         title="Melhores terceiros"
         count={bestThirds.length}
-        subtitle="Mostre ou esconda os melhores terceiros"
         defaultOpen={false}
         mobileDefaultOpen={false}
       >
@@ -562,7 +559,6 @@ function KnockoutTab({ games, standings, bestThirds, error, message, generating,
       <ExpandableSection
         title="Mata-mata"
         count={knockoutGames.length}
-        subtitle="Mostre ou esconda os jogos do mata-mata"
         defaultOpen={false}
         mobileDefaultOpen={false}
       >
