@@ -111,7 +111,7 @@ export default function CopaPage() {
       )}
 
       <section>
-        <SectionTitle title="Mata-mata publicado" />
+        <SectionTitle title="Mata-Mata" />
         {knockoutByStage.length === 0 ? (
           <div className="card" style={{ padding: '1.5rem', color: 'var(--text-muted)' }}>
             Os jogos do mata-mata aparecem aqui quando forem gerados e publicados.

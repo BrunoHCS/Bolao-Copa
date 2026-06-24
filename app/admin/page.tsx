@@ -6,6 +6,7 @@ import { supabase, Player, Game, GroupStanding, BestThird } from '@/lib/supabase
 import { clearLocalAuthState, getCurrentSessionSafe, getPlayerForSessionSafe } from '@/lib/auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { ExpandableSection } from '@/components/ExpandableSection'
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error'
 type AdminTab = 'results' | 'new-game' | 'knockout'
@@ -325,80 +326,134 @@ function ResultsTab({ games, results, saveStatus, saveErrors, onResultChange, on
   onResultChange: (gameId: string, side: 'home' | 'away', value: string) => void
   onSave: (game: Game) => void
 }) {
+  const pendingGames = games.filter(game => !game.is_finished)
+  const finishedGames = games.filter(game => game.is_finished)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
         Insira o resultado final de cada jogo. Os pontos serão calculados automaticamente.
       </p>
-      {games.map(game => {
+
+      {pendingGames.map(game => {
         const status = saveStatus[game.id] ?? 'idle'
         const errMsg = saveErrors[game.id] ?? ''
 
         return (
-          <div key={game.id} className="card" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '220px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {game.match_number && <span className="badge badge-muted">Jogo {game.match_number}</span>}
-                  <span style={{ fontSize: '1.5rem' }}>{game.home_flag}</span>
-                  <span style={{ fontWeight: 600 }}>{game.home_team}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>vs</span>
-                  <span style={{ fontWeight: 600 }}>{game.away_team}</span>
-                  <span style={{ fontSize: '1.5rem' }}>{game.away_flag}</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontFamily: 'Barlow Condensed', letterSpacing: '0.05em' }}>
-                  {format(new Date(game.match_date), "d MMM 'às' HH:mm", { locale: ptBR })} · {game.stage}
-                  {game.is_published === false && ' · não publicado'}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  className="input-score"
-                  style={{ width: '3.5rem', fontSize: '1.5rem' }}
-                  type="number"
-                  min="0"
-                  max="99"
-                  value={results[game.id]?.home ?? ''}
-                  onChange={e => onResultChange(game.id, 'home', e.target.value)}
-                  placeholder="-"
-                />
-                <span className="font-display" style={{ color: 'var(--text-muted)' }}>x</span>
-                <input
-                  className="input-score"
-                  style={{ width: '3.5rem', fontSize: '1.5rem' }}
-                  type="number"
-                  min="0"
-                  max="99"
-                  value={results[game.id]?.away ?? ''}
-                  onChange={e => onResultChange(game.id, 'away', e.target.value)}
-                  placeholder="-"
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {status === 'success' && <span className="badge badge-green">Pontos calculados</span>}
-                {status !== 'success' && game.is_finished && <span className="badge badge-green">Finalizado</span>}
-                {status !== 'success' && !game.is_finished && <span className="badge badge-muted">Pendente</span>}
-                <button
-                  className="btn-gold"
-                  style={{ padding: '0.45rem 1rem', fontSize: '0.82rem' }}
-                  onClick={() => onSave(game)}
-                  disabled={status === 'saving' || results[game.id]?.home === '' || results[game.id]?.away === ''}
-                >
-                  {status === 'saving' ? 'Salvando...' : game.is_finished ? 'Atualizar' : 'Confirmar'}
-                </button>
-              </div>
-            </div>
-
-            {status === 'error' && errMsg && (
-              <div style={{ marginTop: '0.75rem', background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', borderRadius: '8px', padding: '0.6rem 0.9rem', color: 'var(--red)', fontSize: '0.85rem' }}>
-                {errMsg}
-              </div>
-            )}
-          </div>
+          <GameResultCard
+            key={game.id}
+            game={game}
+            result={results[game.id]}
+            status={status}
+            errMsg={errMsg}
+            onResultChange={onResultChange}
+            onSave={onSave}
+          />
         )
       })}
+
+      {finishedGames.length > 0 && (
+        <ExpandableSection
+          title="✅ Jogos Finalizados"
+          count={finishedGames.length}
+          subtitle="Mostre ou esconda os resultados já encerrados"
+          defaultOpen={false}
+          mobileDefaultOpen={false}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+            {finishedGames.map(game => {
+              const status = saveStatus[game.id] ?? 'idle'
+              const errMsg = saveErrors[game.id] ?? ''
+
+              return (
+                <GameResultCard
+                  key={game.id}
+                  game={game}
+                  result={results[game.id]}
+                  status={status}
+                  errMsg={errMsg}
+                  onResultChange={onResultChange}
+                  onSave={onSave}
+                />
+              )
+            })}
+          </div>
+        </ExpandableSection>
+      )}
+    </div>
+  )
+}
+
+function GameResultCard({ game, result, status, errMsg, onResultChange, onSave }: {
+  game: Game
+  result?: { home: string; away: string }
+  status: SaveStatus
+  errMsg: string
+  onResultChange: (gameId: string, side: 'home' | 'away', value: string) => void
+  onSave: (game: Game) => void
+}) {
+  return (
+    <div className="card" style={{ padding: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '220px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {game.match_number && <span className="badge badge-muted">Jogo {game.match_number}</span>}
+            <span style={{ fontSize: '1.5rem' }}>{game.home_flag}</span>
+            <span style={{ fontWeight: 600 }}>{game.home_team}</span>
+            <span style={{ color: 'var(--text-muted)' }}>vs</span>
+            <span style={{ fontWeight: 600 }}>{game.away_team}</span>
+            <span style={{ fontSize: '1.5rem' }}>{game.away_flag}</span>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontFamily: 'Barlow Condensed', letterSpacing: '0.05em' }}>
+            {format(new Date(game.match_date), "d MMM 'às' HH:mm", { locale: ptBR })} · {game.stage}
+            {game.is_published === false && ' · não publicado'}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input
+            className="input-score"
+            style={{ width: '3.5rem', fontSize: '1.5rem' }}
+            type="number"
+            min="0"
+            max="99"
+            value={result?.home ?? ''}
+            onChange={e => onResultChange(game.id, 'home', e.target.value)}
+            placeholder="-"
+          />
+          <span className="font-display" style={{ color: 'var(--text-muted)' }}>x</span>
+          <input
+            className="input-score"
+            style={{ width: '3.5rem', fontSize: '1.5rem' }}
+            type="number"
+            min="0"
+            max="99"
+            value={result?.away ?? ''}
+            onChange={e => onResultChange(game.id, 'away', e.target.value)}
+            placeholder="-"
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {status === 'success' && <span className="badge badge-green">Pontos calculados</span>}
+          {status !== 'success' && game.is_finished && <span className="badge badge-green">Finalizado</span>}
+          {status !== 'success' && !game.is_finished && <span className="badge badge-muted">Pendente</span>}
+          <button
+            className="btn-gold"
+            style={{ padding: '0.45rem 1rem', fontSize: '0.82rem' }}
+            onClick={() => onSave(game)}
+            disabled={status === 'saving' || result?.home === '' || result?.away === ''}
+          >
+            {status === 'saving' ? 'Salvando...' : game.is_finished ? 'Atualizar' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+
+      {status === 'error' && errMsg && (
+        <div style={{ marginTop: '0.75rem', background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', borderRadius: '8px', padding: '0.6rem 0.9rem', color: 'var(--red)', fontSize: '0.85rem' }}>
+          {errMsg}
+        </div>
+      )}
     </div>
   )
 }
@@ -445,9 +500,14 @@ function KnockoutTab({ games, standings, bestThirds, error, message, generating,
         </button>
       </div>
 
-      <section>
-        <SectionLabel title="Classificação dos grupos" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+      <ExpandableSection
+        title="Classificação dos grupos"
+        count={groups.length}
+        subtitle="Mostre ou esconda a tabela de classificação"
+        defaultOpen={false}
+        mobileDefaultOpen={false}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem', marginTop: '0.75rem' }}>
           {groups.map(group => (
             <div key={group} className="card" style={{ padding: '1rem' }}>
               <h3 className="font-display" style={{ fontSize: '1.3rem', marginBottom: '0.75rem' }}>Grupo {group}</h3>
@@ -466,11 +526,16 @@ function KnockoutTab({ games, standings, bestThirds, error, message, generating,
             </div>
           ))}
         </div>
-      </section>
+      </ExpandableSection>
 
-      <section>
-        <SectionLabel title="Melhores terceiros" />
-        <div className="card" style={{ padding: '1rem', overflowX: 'auto' }}>
+      <ExpandableSection
+        title="Melhores terceiros"
+        count={bestThirds.length}
+        subtitle="Mostre ou esconda os melhores terceiros"
+        defaultOpen={false}
+        mobileDefaultOpen={false}
+      >
+        <div className="card" style={{ padding: '1rem', overflowX: 'auto', marginTop: '0.75rem' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '620px' }}>
             <thead>
               <tr style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'left' }}>
@@ -492,11 +557,16 @@ function KnockoutTab({ games, standings, bestThirds, error, message, generating,
             </tbody>
           </table>
         </div>
-      </section>
+      </ExpandableSection>
 
-      <section>
-        <SectionLabel title="Mata-mata" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <ExpandableSection
+        title="Mata-mata"
+        count={knockoutGames.length}
+        subtitle="Mostre ou esconda os jogos do mata-mata"
+        defaultOpen={false}
+        mobileDefaultOpen={false}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
           {knockoutGames.length === 0 && (
             <div className="card" style={{ padding: '1.5rem', color: 'var(--text-muted)' }}>Nenhum jogo de mata-mata gerado ainda.</div>
           )}
@@ -511,7 +581,7 @@ function KnockoutTab({ games, standings, bestThirds, error, message, generating,
             />
           ))}
         </div>
-      </section>
+      </ExpandableSection>
     </div>
   )
 }
