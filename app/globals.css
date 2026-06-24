@@ -91,6 +91,19 @@ body {
 .badge-red { background: rgba(255,71,87,0.15); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
 .badge-muted { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--border); }
 
+.expandable-section { border-top: 1px solid var(--border); }
+.expandable-section:first-child { border-top: none; }
+.expandable-trigger {
+  width: 100%; min-height: 3.25rem; padding: 0.9rem 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: none; border: none; color: var(--text-primary); cursor: pointer; text-align: left;
+}
+.expandable-trigger:hover .expandable-title { color: var(--green); }
+.expandable-title { color: var(--text-primary); font-size: 1.45rem; line-height: 1; transition: color 0.2s ease; }
+.expandable-subtitle { color: var(--text-muted); font-size: 0.8rem; line-height: 1.25; }
+.expandable-chevron { color: var(--text-muted); font-size: 0.9rem; transition: transform 0.2s ease; }
+.expandable-content { padding: 0 0 1rem; }
+
 .navbar { background: rgba(5,9,15,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
 
 /* --- Navbar layout --- */
@@ -141,6 +154,10 @@ body {
   .nav-auth { flex-direction: column; gap: 0.5rem; }
   .nav-auth a { width: 100%; }
   .nav-auth button { width: 100%; }
+
+  .expandable-trigger { min-height: 3.75rem; padding: 1rem 0; }
+  .expandable-title { font-size: 1.25rem; }
+  .expandable-content { padding-bottom: 0.85rem; }
 }
 
 .rank-row { display: grid; grid-template-columns: 2.5rem 1fr auto; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
